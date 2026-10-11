@@ -17,7 +17,12 @@ mapa=[]
 misiles=[]
 terrenos=[]
 botones=[]
+punto=[]
+x=[]
+y=[]
 entrada=""
+cuenta=0
+opicion=0
 
 #########################
 #Funciones
@@ -114,35 +119,93 @@ def buscar_misiles(clave):
 #Funciones para entradas
 #------------
 
-#Funcion para pedir la entrada
-def pedir_entrada():
+#Pedir un grado
+#E: Pide el rango y palabra por si es latitud o lungitud
+#S: True si se introduce correctamente y False sino
+def pedir_grados(rango):
     global entrada
-    entrada= var_entrada.get()
-    var_entrada.set("")
-    return entrada
+    if es_entero(entrada):
+        entrada=int(entrada)
+        if abs(entrada)>rango:
+            var_error.set(f"Solo se permiten grados de -{rango} a {rango}")
+            return False
+        var_error.set("")
+        var_entrada.set("")
+        return True
+    if entrada!="":
+        var_error.set("Error! eso no es un grado valido")
+    return False
 
-#Función para pedir un numero entero
-#E: mensaje
-#S: El numero introducido
-def pedir_entero(mensaje):
+#Pedir minuto o segundo
+#E: Pide el rango y palabra por si es latitud o lungitud,ademas de una cuenta para saber si es minutos segundos
+#S: True si se introduce correctamente y False sino
+def pedir_min_o_sec(rango):
     global entrada
-    var_mensaje.set(mensaje)
-    numero= entrada
-    if es_entero(numero):
-        return int(numero)
-    else:
-        var_error.set("Solo se aceptan números enteros positivos.")
+    if es_entero(entrada):
+        entrada=int(entrada) #Aqui convierto la entrada a entero
+        if 0>entrada or entrada>rango:
+            var_error.set(f"Solo se permiten numeros de 0 a {rango}")
+            return False
+        var_error.set("")
+        var_entrada.set("")
+        return True
+    if entrada!="":
+        var_error.set("Error! eso no es valido")
+    return False
 
-#Pedir un punto(latitud y longitud)
+#Pedir un punto    
 def pedir_un_punto():
-    label_entrada.pack()
-    entrada.pack()
-    boton_entrada.pack()
-    label_error.pack()
-    gradosy=pedir_entero("Introduce los grados de la longitud")
-    print(gradosy)
+    global cuenta
+    if cuenta<3:
+        rango=[180]
+    else:
+        rango=[90]
+    rango+=[60,3600]
+    if cuenta==0 or cuenta==3:
+        return pedir_grados(rango[0])
+    elif cuenta==1 or cuenta==2 or cuenta==4 or cuenta==5:
+        return pedir_min_o_sec(rango[1])
 
+#Indicar las entradas
+#Estos van a ser los los mensajes del label
+def indicar_entradas_punto():
+    global cuenta
+    palabra="latitud"
+    palabra2="minutos"
+    if cuenta<3:
+        palabra="longitud"
+    if cuenta==0 or cuenta==3:
+        var_mensaje.set(f"Introduce los grados para la {palabra}")
+        return #esto es para que no sigua
+    if cuenta==2 or cuenta==5:
+        palabra2= "segundos"
+    var_mensaje.set(f"Introduce los {palabra2} para la {palabra}")
 
+#armar coordenadas         
+def armar_punto():   
+    global punto,cuenta,x,y,entrada
+    if pedir_un_punto() and cuenta<3:
+        x.append(entrada)
+        cuenta+=1
+    elif pedir_un_punto() and cuenta<6:
+        y.append(entrada)
+        cuenta+=1
+    if cuenta==6:
+        cuenta+=1
+        punto.append(x)
+        punto.append(y)
+        print(punto)
+    indicar_entradas_punto()
+        
+    
+
+def pedir_entrada():
+    global entrada,opicion
+    entrada= var_entrada.get()
+    if opicion==2:
+        armar_punto()
+        
+    
     
     
     
@@ -254,7 +317,13 @@ def cargar_mapa():
                             y2= 314 - convertir_coordenadas_a_decimales(territorio[1][1][1])
                             terrenos.append([canvas.create_rectangle(x1,y1,x2,y2,outline="red"),territorio[0]])
             i+=1  
-     
+
+#Mostrar menu para introducir
+def mostrar_introducir():
+    label_entrada.pack()
+    campo_entrada.pack()
+    boton_entrada.pack()
+    label_error.pack()
      
 #########################
 #Funciones del menu
@@ -267,8 +336,20 @@ la IA debe adivinar un codigo y
 lanzar un mizil
 """
 def IA_aleatoria():
+    global opicion,punto,cuenta,x,y,entrada
+    punto=[]
+    x=[]
+    y=[]
+    cuenta=0
+    entrada=""
+    opicion=2
+    var_entrada.set("")
+    var_error.set("")
     ocultar_botones()
-    pedir_un_punto()
+    mostrar_introducir()
+    indicar_entradas_punto()
+    
+    
     
     
 #########################
@@ -312,13 +393,13 @@ label_error=tk.Label(root,textvariable=var_error,bg="#3CF1E8")
 
 #Botones
 
-boton_IA_auto= tk.Button(root,text="IA Aleatoria",command=IA_aleatoria)
+boton_IA_auto= tk.Button(root,text="IA Aleatoria",command=IA_aleatoria,)
 boton_IA_auto.pack()
 botones.append(boton_IA_auto)
 
 boton_entrada= tk.Button(root,text="introducir",command=pedir_entrada)
 
 #Entrada
-entrada=tk.Entry(root,textvariable=var_entrada)
+campo_entrada=tk.Entry(root,textvariable=var_entrada)
 
 root.mainloop()
