@@ -56,13 +56,18 @@ def cargar(ruta):
 
 """
 Convertir cordenadas (grados, minutos y segundos a decimales)
-a decimales. la formula es grados + minutos/60 + segundos/3600
+a decimales. la formula es grados + minutos/60 + segundos/3600 pero
+en mi mapa cada grado son 2,6 pixels entonces la formula seria
+(grados + minutos/60 + segundos/3600)*2.16
 """
-#E: 3 numeros(grados,minutos y segundos) para las coordenadas
+#E: una lista con 3 numeros[grados,minutos y segundos] para las coordenadas
 #S: las coordenadas en decimal
 #R:
-def convertir_coordenadas_a_decimales(grados,minutos,segundos):
-    coordenada_decimal= abs(grados) + minutos/60 + segundos/3600
+def convertir_coordenadas_a_decimales(coordenadas):
+    grados= coordenadas[0]
+    minutos= coordenadas[1]
+    segundos= coordenadas[2]
+    coordenada_decimal= (abs(grados) + minutos/60 + segundos/3600)*2.6
     if grados<0:
         return -1*coordenada_decimal
     return coordenada_decimal
@@ -76,7 +81,7 @@ def escribir_grados_verticales():
     y=68
     x=32
     cuenta= 170
-    canvas.create_text(10,y,text="180",font=("Arial",10))
+    canvas.create_text(10,y,text="180",font=("Arial",10)) #Esto es para que no se corte el 180
     while x<=950:
         canvas.create_text(x,y,text=str(abs(cuenta)),font=("Arial",10))
         x+=26
@@ -96,7 +101,7 @@ def escribir_grados_horizontales():
             canvas.create_text(x,y,text=f"{str(cuenta)} N",font=("Arial",10))
         y+=26
         cuenta-=10
-    canvas.create_text(x,545,text=f"{str(abs(cuenta))} S",font=("Arial",10))
+    canvas.create_text(x,545,text=f"{str(abs(cuenta))} S",font=("Arial",10)) #Esto es para que no se corte el ultimo 90
     canvas.create_text(162,40,text="Longitud Oeste",font=("Arial",15))
     canvas.create_text(788,40,text="Longitud Este",font=("Arial",15))
 
@@ -146,19 +151,28 @@ def crear_grafica():
     escribir_grados_verticales()
     escribir_grados_horizontales()
 
-#Hacer cuadricula para ver las coordenadas
-#def hacer_cuadricula():
-
-#Cargar mapa (grafica los territorios)
-#def cargar_mapa():
-#    global mapa,PATH_MAPA
-#    mapa= cargar(PATH_MAPA)
-#    for pais in mapa:
-#        for provincia in pais:
-#            for territorio in provincia:
-#                x1= 475 + convertir_coordenadas_a_decimales(territorio[1][0])
-#                x1= 950 + convertir_coordenadas_a_decimales(territorio[1][0])
-                
+#Cargar mapa (graficar los territorios)
+def cargar_mapa():
+    global mapa,PATH_MAPA
+    mapa= cargar(PATH_MAPA)
+    i=1
+    for pais in mapa:
+        i=1
+        for provincia in pais[i]:
+            if type(provincia)==str:
+                pass
+            else:
+                for territorios in provincia:
+                    if type(territorios)== str:
+                        pass
+                    else:
+                        for territorio in territorios:
+                            x1= 472 + convertir_coordenadas_a_decimales(territorio[1][0][0])
+                            y1= 314 - convertir_coordenadas_a_decimales(territorio[1][0][1])
+                            x2= 472 + convertir_coordenadas_a_decimales(territorio[1][1][0])
+                            y2= 314 - convertir_coordenadas_a_decimales(territorio[1][1][1])
+                            canvas.create_rectangle(x1,y1,x2,y2,outline="red")
+            i+=1  
     
 
 #########################
@@ -177,7 +191,7 @@ mapa_mundi= tk.PhotoImage(file="mapa22.png")
 canvas.create_image(475,305, image=mapa_mundi)
     
 crear_grafica()
-canvas.create_text(475,10,text="Mapa mundi",font=("Arial",12))
-
+canvas.create_text(475,20,text="Mapa mundial",font=("Arial",20))
+cargar_mapa()
 
 root.mainloop()
