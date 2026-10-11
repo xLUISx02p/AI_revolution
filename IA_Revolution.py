@@ -15,6 +15,9 @@ PATH_MISILES="misiles.txt"
 
 mapa=[]
 misiles=[]
+terrenos=[]
+botones=[]
+entrada=""
 
 #########################
 #Funciones
@@ -25,9 +28,9 @@ misiles=[]
 #------------
 
 # is_lista
+# retorn True si el valor puede ser una lista
 #E: Sting
 #S: Bool
-# retorn True si el valor puede ser una lista
 def is_lista(str_value):
     try:
         eval_value=eval(str_value)
@@ -37,9 +40,27 @@ def is_lista(str_value):
     except:
         return False
     
+# Es entero
+'''retorna True si el valor se puede convertir a entero, False si no'''
+#E: un valor cualquiera
+#S: boolean
+def es_entero(value):
+        try:
+                integer = int(value)
+                return True
+        except:
+                return False
+            
+
+            
 #------------
 #Funciones para archivos
 #------------
+
+#Guardar un archivo
+def guardar(ruta,destino):
+    with open(ruta,"w") as file:
+        file.write(str(destino))
 
 #Cargar un archivo
 def cargar(ruta):
@@ -71,6 +92,60 @@ def convertir_coordenadas_a_decimales(coordenadas):
     if grados<0:
         return -1*coordenada_decimal
     return coordenada_decimal
+
+"""
+Buscar misil, esta funcion con un número que le den
+debera buscar cuales misiles comparten esa clave
+"""
+#E: Un numero entero positivo
+#S: La lista de [[Pais,tipo,cantidad de misiles con esa clave],...]
+#R:
+def buscar_misiles(clave):
+    global misiles
+    misiles_disponibles=[]
+    for pais in misiles:
+        for misil in pais[3]:
+            print(misil[4])
+            if misil[4]==clave:
+                misiles_disponibles.append([pais[0],misil[0],misil[3]])
+    return misiles_disponibles
+                    
+#------------
+#Funciones para entradas
+#------------
+
+#Funcion para pedir la entrada
+def pedir_entrada():
+    global entrada
+    entrada= var_entrada.get()
+    var_entrada.set("")
+    return entrada
+
+#Función para pedir un numero entero
+#E: mensaje
+#S: El numero introducido
+def pedir_entero(mensaje):
+    global entrada
+    var_mensaje.set(mensaje)
+    numero= entrada
+    if es_entero(numero):
+        return int(numero)
+    else:
+        var_error.set("Solo se aceptan números enteros positivos.")
+
+#Pedir un punto(latitud y longitud)
+def pedir_un_punto():
+    label_entrada.pack()
+    entrada.pack()
+    boton_entrada.pack()
+    label_error.pack()
+    gradosy=pedir_entero("Introduce los grados de la longitud")
+    print(gradosy)
+
+
+    
+    
+    
 
 #------------
 #Funciones para la interfaz grafica
@@ -150,19 +225,25 @@ def crear_grafica():
     crear_lineas_horizontales()
     escribir_grados_verticales()
     escribir_grados_horizontales()
+    
+#Ocultar botones
+def ocultar_botones():
+    global botones
+    for boton in botones:
+        boton.pack_forget()
+    
 
 #Cargar mapa (graficar los territorios)
 def cargar_mapa():
-    global mapa,PATH_MAPA
-    mapa= cargar(PATH_MAPA)
+    global mapa,terrenos,PATH_MAPA
     i=1
-    for pais in mapa:
+    for pais in mapa:  #Aqui se saca el pais
         i=1
-        for provincia in pais[i]:
-            if type(provincia)==str:
+        for provincia in pais[i]: #aqui se saca la provincia pero primero
+            if type(provincia)==str: #Se debe pasar el nombre
                 pass
             else:
-                for territorios in provincia:
+                for territorios in provincia: #Aqui es lo mismo que con la provincia
                     if type(territorios)== str:
                         pass
                     else:
@@ -171,9 +252,31 @@ def cargar_mapa():
                             y1= 314 - convertir_coordenadas_a_decimales(territorio[1][0][1])
                             x2= 472 + convertir_coordenadas_a_decimales(territorio[1][1][0])
                             y2= 314 - convertir_coordenadas_a_decimales(territorio[1][1][1])
-                            canvas.create_rectangle(x1,y1,x2,y2,outline="red")
+                            terrenos.append([canvas.create_rectangle(x1,y1,x2,y2,outline="red"),territorio[0]])
             i+=1  
+     
+     
+#########################
+#Funciones del menu
+#########################
+               
+#IA aleatoria
+"""
+Aqui se va hacer el menu donde
+la IA debe adivinar un codigo y 
+lanzar un mizil
+"""
+def IA_aleatoria():
+    ocultar_botones()
+    pedir_un_punto()
     
+    
+#########################
+#Cargar archivos
+#########################    
+    
+mapa= cargar(PATH_MAPA)
+misiles= cargar(PATH_MISILES)
 
 #########################
 #Ventana
@@ -182,6 +285,14 @@ def cargar_mapa():
 #Se crea la ventana
 root= tk.Tk()                
 root.title("AI Revolution")
+root.config(bg="#3CF1E8")
+
+
+#Variables Tk
+
+var_entrada= tk.StringVar()
+var_mensaje= tk.StringVar()
+var_error= tk.StringVar()
 
 #Se crea el canva
 canvas= tk.Canvas(root,width=1000,height=550,bg="#77B5FE")
@@ -193,5 +304,21 @@ canvas.create_image(475,305, image=mapa_mundi)
 crear_grafica()
 canvas.create_text(475,20,text="Mapa mundial",font=("Arial",20))
 cargar_mapa()
+
+#Labels
+
+label_entrada=tk.Label(root,textvariable=var_mensaje,bg="#3CF1E8")
+label_error=tk.Label(root,textvariable=var_error,bg="#3CF1E8")
+
+#Botones
+
+boton_IA_auto= tk.Button(root,text="IA Aleatoria",command=IA_aleatoria)
+boton_IA_auto.pack()
+botones.append(boton_IA_auto)
+
+boton_entrada= tk.Button(root,text="introducir",command=pedir_entrada)
+
+#Entrada
+entrada=tk.Entry(root,textvariable=var_entrada)
 
 root.mainloop()
