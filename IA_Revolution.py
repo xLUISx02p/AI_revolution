@@ -1,6 +1,6 @@
 #Importacion de librerias
 import tkinter as tk
-import random
+import random as rnd
 
 #########################
 #Constantes
@@ -13,16 +13,19 @@ PATH_MISILES="misiles.txt"
 #Variables globales
 #########################
 
-mapa=[]
-misiles=[]
+mapa=[] #Aqui se cargan los puntos del mapa
+misiles=[] #Aqui se cargan los misiles
+misiles_con_x_clave=[] #Aqui se guardan los misiles con la clave dada
 terrenos=[]
-botones=[]
-punto=[]
-x=[]
-y=[]
-entrada=""
-cuenta=0
-opicion=0
+botones=[] #Aqui se guardan los botones del menu
+misiles_danho=[] #Estos son los misiles lanzados y el daño ahco a un punto [cantidad de misiles,daño en Km2]
+x=[] #Se guarda una longitud
+y=[] #Se guuarda una latitud
+clave=0 #Aqui se guarda la clave
+entrada="" #Aqui se guarda lo que ingrese el usuario
+cuenta=0 #Esta cuenta es la que maneja los menus
+opicion=0 #Esto decide cual boton se apreto
+
 
 #########################
 #Funciones
@@ -105,22 +108,50 @@ debera buscar cuales misiles comparten esa clave
 #E: Un numero entero positivo
 #S: La lista de [[Pais,tipo,cantidad de misiles con esa clave],...]
 #R:
-def buscar_misiles(clave):
-    global misiles
-    misiles_disponibles=[]
+def buscar_misiles():
+    global misiles,clave,misiles_con_x_clave
+    misiles_con_x_clave=[]
     for pais in misiles:
         for misil in pais[3]:
-            print(misil[4])
             if misil[4]==clave:
-                misiles_disponibles.append([pais[0],misil[0],misil[3]])
-    return misiles_disponibles
-                    
+                misiles_con_x_clave.append([pais[0],misil[0],misil[3]])
+
+#Crear mensaje para los misiles encontrados
+def crea_mensaje_misiles():
+    global misiles_con_x_clave
+    mensaje= f"Paises con misiles con esa clave: "
+    for pais in misiles_con_x_clave:
+        mensaje+= str(pais[0])+", "+str(pais[1])+", "+str(pais[2])+" | "
+    mensaje= mensaje[0:-3] +"."
+    return mensaje
+     
 #------------
 #Funciones para entradas
 #------------
 
+#Pedir una cantidad de misiles
+def pedir_misiles():
+    global misiles_con_x_clave,entrada,cuenta
+    pais=misiles_con_x_clave[0]
+    if misiles_con_x_clave==[]:
+        cuenta==9
+    var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
+    if not es_entero(entrada):
+        if entrada=="":
+            pass
+        else:
+            var_error.set("Error! solo se aceptan números enteros positivos")
+    else:
+        entrada=int(entrada)
+        if entrada>pais[2]:
+         var_error.set(f"Error! solo puedes lanzar de 0 a {pais[2]} misiles")
+        else:
+            cuenta+=0.5
+            submenu_IA_aleatoria()
+        
+
 #Pedir un grado
-#E: Pide el rango y palabra por si es latitud o lungitud
+#E: Pide el rango
 #S: True si se introduce correctamente y False sino
 def pedir_grados(rango):
     global entrada
@@ -137,7 +168,7 @@ def pedir_grados(rango):
     return False
 
 #Pedir minuto o segundo
-#E: Pide el rango y palabra por si es latitud o lungitud,ademas de una cuenta para saber si es minutos segundos
+#E: Pide el rango por si es latitud o lungitud,
 #S: True si se introduce correctamente y False sino
 def pedir_min_o_sec(rango):
     global entrada
@@ -156,14 +187,14 @@ def pedir_min_o_sec(rango):
 #Pedir un punto    
 def pedir_un_punto():
     global cuenta
-    if cuenta<3:
+    if cuenta<4:
         rango=[180]
     else:
         rango=[90]
     rango+=[60,3600]
-    if cuenta==0 or cuenta==3:
+    if cuenta==2 or cuenta==5:
         return pedir_grados(rango[0])
-    elif cuenta==1 or cuenta==2 or cuenta==4 or cuenta==5:
+    elif 3<=cuenta<=4 or 6<=cuenta<=7:
         return pedir_min_o_sec(rango[1])
 
 #Indicar las entradas
@@ -172,42 +203,26 @@ def indicar_entradas_punto():
     global cuenta
     palabra="latitud"
     palabra2="minutos"
-    if cuenta<3:
+    if cuenta<5:
         palabra="longitud"
-    if cuenta==0 or cuenta==3:
+    if cuenta==2 or cuenta==5:
         var_mensaje.set(f"Introduce los grados para la {palabra}")
         return #esto es para que no sigua
-    if cuenta==2 or cuenta==5:
+    if cuenta==4 or cuenta==7:
         palabra2= "segundos"
     var_mensaje.set(f"Introduce los {palabra2} para la {palabra}")
 
 #armar coordenadas         
 def armar_punto():   
     global punto,cuenta,x,y,entrada
-    if pedir_un_punto() and cuenta<3:
+    if pedir_un_punto() and cuenta<5:
         x.append(entrada)
         cuenta+=1
-    elif pedir_un_punto() and cuenta<6:
+    elif pedir_un_punto() and cuenta<8:
         y.append(entrada)
         cuenta+=1
-    if cuenta==6:
-        cuenta+=1
-        punto.append(x)
-        punto.append(y)
-        print(punto)
+    print(x,y)
     indicar_entradas_punto()
-        
-    
-
-def pedir_entrada():
-    global entrada,opicion
-    entrada= var_entrada.get()
-    if opicion==2:
-        armar_punto()
-        
-    
-    
-    
     
 
 #------------
@@ -294,6 +309,11 @@ def ocultar_botones():
     global botones
     for boton in botones:
         boton.pack_forget()
+        
+def mostrar_botones():
+    global botones
+    for boton in botones:
+        boton.pack()
     
 
 #Cargar mapa (graficar los territorios)
@@ -320,23 +340,78 @@ def cargar_mapa():
 
 #Mostrar menu para introducir
 def mostrar_introducir():
-    label_entrada.pack()
     campo_entrada.pack()
-    boton_entrada.pack()
+    boton_menu_principal.pack()
     label_error.pack()
+    
+def ocultar_introducir():
+    campo_entrada.pack_forget()
+    boton_menu_principal.pack_forget()
+    label_error.pack_forget()
+    
+#Mostra los misiles con clave
+def mostrar_misiles_clave():
+    global misiles_con_x_clave
+    buscar_misiles()
+    label_mensaje.pack()
+    if len(misiles_con_x_clave)==0:
+        var_mensaje.set(f"La clave es {clave}\nNo se encontranron misiles con la clave {clave}")
+    else:
+        var_mensaje.set(f"La clave es {clave}\n{crea_mensaje_misiles()}")
      
+#Mostrar disparo en en el mapa
+def mostrar_disparo():
+    global x,y
+    x1= convertir_coordenadas_a_decimales(x)
+    y1= convertir_coordenadas_a_decimales(y)
+    canvas.create_oval(x1-10,y1-10,x1+10,y1+10,fill="black")
 #########################
-#Funciones del menu
+#Funciones de submenus
 #########################
                
+#Submenu IA Aleatoria
+def submenu_IA_aleatoria():
+    global cuenta,misiles_con_x_clave
+    if cuenta==0:
+        mostrar_misiles_clave()
+        boton_continuar.pack()
+        if len(misiles_con_x_clave)==0:
+            label_mensaje.pack_forget()
+            mostrar_botones()
+    elif 1==cuenta:
+        mostrar_introducir()
+        pedir_misiles()
+    elif 1.5==cuenta:
+        ocultar_introducir()
+        var_entrada.set("")
+        var_mensaje.set("Ahora vamos a introducir un punto del mapa")
+        cuenta-=0.5
+        boton_continuar.pack()
+    elif 2<=cuenta<=7:
+        mostrar_introducir()
+        armar_punto()
+    elif cuenta==8:
+        mostrar_disparo()
+        
+        
+            
+        
+    
+
+
+#########################
+#Funciones de menus
+#########################
+
 #IA aleatoria
 """
-Aqui se va hacer el menu donde
+Aqui se va abrir el menu donde
 la IA debe adivinar un codigo y 
 lanzar un mizil
 """
 def IA_aleatoria():
-    global opicion,punto,cuenta,x,y,entrada
+    global opicion,punto,cuenta,x,y,entrada,clave
+    clave=0
     punto=[]
     x=[]
     y=[]
@@ -346,11 +421,26 @@ def IA_aleatoria():
     var_entrada.set("")
     var_error.set("")
     ocultar_botones()
-    mostrar_introducir()
-    indicar_entradas_punto()
+    clave=23
+    menu_principal()
     
     
+def menu_principal():
+    global entrada,opicion
+    entrada= var_entrada.get()
+    if opicion==2:
+        submenu_IA_aleatoria()    
     
+#Boton de continuar
+#Siempre le suma uno a la cuenta y llama
+#al menu principal para que se muestre lo 
+#que sea
+def continuar():
+    global cuenta
+    cuenta+=1
+    menu_principal()
+    boton_continuar.pack_forget()
+
     
 #########################
 #Cargar archivos
@@ -388,7 +478,7 @@ cargar_mapa()
 
 #Labels
 
-label_entrada=tk.Label(root,textvariable=var_mensaje,bg="#3CF1E8")
+label_mensaje=tk.Label(root,textvariable=var_mensaje,bg="#3CF1E8")
 label_error=tk.Label(root,textvariable=var_error,bg="#3CF1E8")
 
 #Botones
@@ -397,7 +487,9 @@ boton_IA_auto= tk.Button(root,text="IA Aleatoria",command=IA_aleatoria,)
 boton_IA_auto.pack()
 botones.append(boton_IA_auto)
 
-boton_entrada= tk.Button(root,text="introducir",command=pedir_entrada)
+boton_continuar=tk.Button(root,text="Continuar",command=continuar)
+    
+boton_menu_principal= tk.Button(root,text="introducir",command=menu_principal)
 
 #Entrada
 campo_entrada=tk.Entry(root,textvariable=var_entrada)
