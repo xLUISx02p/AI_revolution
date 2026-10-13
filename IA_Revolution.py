@@ -19,7 +19,7 @@ misiles_con_x_clave=[['Costa Rica', 'Balistico', 40,23], ['Panama', 'Ojiva', 23]
 terrenos=[] #Aqui esta la ubicacion de los terrenos en la lista mapa y sus puntos
 vida_paises=[]#Aqui va estar la vida y territorio de los paises[[pais1,terreno_total,terreno_restante,vida,[[provincia1,terreno_total,terreno_restante,vida,[[territorio1,terreno_total,terreno_restante,vida],[territorio1,terreno_total,terreno_restante,vida]],[provincia2...]],[pais2,[...]]
 botones=[] #Aqui se guardan los botones del menu
-misiles_danho=[] #Estos son los misiles lanzados y el daño ahco a un punto [cantidad de misiles,daño en Km2]
+misil_danho=0 #Aqui se guarda el danho del misil
 x=[] #Se guarda una longitud
 y=[] #Se guuarda una latitud
 clave=0 #Aqui se guarda la clave
@@ -203,7 +203,7 @@ def crear_vida_provincias(pais,num_pais):
                 provincia=pais[territorio[2]][0]
                 terrenos_provincias.append([provincia,0,0,100,[]])
             terreno= crear_vida_territorio(territorio)
-            terrenos_provincias[i][4].append([terreno])
+            terrenos_provincias[i][4].append(terreno)
             terrenos_provincias[i][1]+=terreno[1]
             terrenos_provincias[i][2]+=terreno[2]
     return terrenos_provincias
@@ -237,7 +237,7 @@ def buscar_misiles():
     for pais in misiles:
         for misil in pais[3]:
             if misil[4]==clave:
-                misiles_con_x_clave.append([pais[0],misil[0],misil[3],misil[4]])
+                misiles_con_x_clave.append([pais[0],misil[0],misil[3],misil[4],misil[1]])
 
 #Crear mensaje para los misiles encontrados
 def crea_mensaje_misiles():
@@ -248,6 +248,36 @@ def crea_mensaje_misiles():
     mensaje= mensaje[0:-3] +"."
     return mensaje
 
+
+#Bajar vida
+#Esta funcion baja la vida de los territorios
+#E: El territorio golpeado(lista) y el daño(entero)
+def bajar_vida(territorio_golpe,danho):
+    global vida_paises
+    num_pais=0
+    num_provincia=0
+    num_territorio=0
+    for pais in vida_paises:
+        print(pais)
+        if num_pais==territorio_golpe[1]:
+            num_provincia=0
+            for provincia in pais[4][0]:
+                if num_provincia==territorio_golpe[2]:
+                    num_territorio=0
+                    for territorio in provincia[4]:
+                        if num_territorio==territorio_golpe[3]:
+                            territorio[2]-=danho
+                            territorio[3]= territorio[2]/territorio[1]*100
+                            provincia[2]-=danho
+                            provincia[3]= provincia[2]/provincia[1]*100
+                            pais[2]-=danho
+                            pais[3]=pais[2]/pais[1]*100
+                            print(vida_paises)
+                            break
+                        num_territorio+=1
+                num_provincia+=1
+            num_pais+=1
+            
 """
 Atino el disparo, esta funcion dice si 
 el disparo realizado quedo dentro de un 
@@ -255,12 +285,11 @@ territorio o no
 """
 #S: Retorna la lista del territorio que pego o una lista vacia 
 def atino_el_disparo():
-    global x,y,terrenos
-    print(x,y)
+    global x,y,terrenos,misil_danho
     for territorio in terrenos:
         coordenadas= buscar_coordenadas_terreno(territorio,True)
-        print(coordenadas)
         if ((coordenadas[0]<= x <=coordenadas[2])and (coordenadas[3]<= y <=coordenadas[1])) :
+            bajar_vida(territorio,misil_danho)
             return territorio
     return []
 
@@ -282,7 +311,7 @@ def actualizar_cantidad_misiles(gastados):
 
 #Pedir una cantidad de misiles
 def pedir_misiles():
-    global misiles_con_x_clave,entrada,cuenta
+    global misiles_con_x_clave,entrada,cuenta,misil_danho
     if misiles_con_x_clave==[]:
         cuenta==9
     else:
@@ -300,6 +329,7 @@ def pedir_misiles():
             else:
                 cuenta+=0.5
                 actualizar_cantidad_misiles(entrada)
+                misil_danho=pais[-1]*entrada
                 misiles_con_x_clave=misiles_con_x_clave[1:]
                 var_error.set("")
                 submenu_IA_aleatoria()
@@ -656,5 +686,6 @@ boton_menu_principal= tk.Button(root,text="introducir",command=menu_principal)
 
 #Entrada
 campo_entrada=tk.Entry(root,textvariable=var_entrada)
+print(vida_paises)
 
 root.mainloop()
