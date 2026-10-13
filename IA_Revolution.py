@@ -16,7 +16,8 @@ PATH_MISILES="misiles.txt"
 mapa=[] #Aqui se cargan los puntos del mapa
 misiles=[] #Aqui se cargan los misiles
 misiles_con_x_clave=[] #Aqui se guardan los misiles con la clave dada
-terrenos=[]
+terrenos=[] #Aqui esta la ubicacion de los terrenos en la lista mapa y sus puntos
+vida_paises=[]#Aqui va estar la vida y territorio de los paises[[pais1,terreno_total,terreno_restante,vida,[[provincia1,terreno_total,terreno_restante,vida,[[territorio1,terreno_total,terreno_restante,vida],[territorio1,terreno_total,terreno_restante,vida]],[provincia2...]],[pais2,[...]]
 botones=[] #Aqui se guardan los botones del menu
 misiles_danho=[] #Estos son los misiles lanzados y el daño ahco a un punto [cantidad de misiles,daño en Km2]
 x=[] #Se guarda una longitud
@@ -101,13 +102,139 @@ def convertir_coordenadas_a_decimales(coordenadas):
         return -1*coordenada_decimal
     return coordenada_decimal
 
+def conseguir_territorios():
+    global mapa,terrenos
+    num_pais=0
+    num_provincia=0
+    num_territorio=0
+    for pais in mapa:  #Aqui se saca el pais
+        num_provincia=0
+        for provincia in pais[1]: #aqui se saca la provincia pero primero
+            if type(provincia)==str: #Se debe pasar el nombre
+                pass
+            else:
+                for territorios in provincia: #Aqui es lo mismo que con la provincia
+                    num_territorio=0
+                    if type(territorios)== str:
+                        pass
+                    else:
+                        for territorio in territorios:
+                            
+                            x1= territorio[1][0][0]
+                            y1= territorio[1][0][1]
+                            x2= territorio[1][1][0]
+                            y2= territorio[1][1][1]
+                            terrenos.append([territorio[0],num_pais,num_provincia,num_territorio,[[x1,y1],[x2,y2],[[472 +convertir_coordenadas_a_decimales(x1),314 -convertir_coordenadas_a_decimales(y1)],[472 +convertir_coordenadas_a_decimales(x2),314 -convertir_coordenadas_a_decimales(y2)]]]])#Esta lista me guarda el ubicacion del territorio en la lista con sus dos puntos tanto en grados y decimales 
+                            num_territorio+=1
+            num_provincia+=1
+        num_pais+=1
+
+"""
+Buscar coordenadas terreno,
+dado un territorio de terrenos esta 
+funcion me devuelve las coordenadas ya sea
+en grados o decimales. decimale=True para devolver 
+decimales y false para grados
+"""
+#E: Una lista que es un terreno de la lista terrenos y un bool para
+# que si es True entonces devuelve decimales y false para grados
+#S: una lista con las coordenadas [x1,y1,x2,y2] o [longitud1,latitud1,longitud2,latitud2]
+def buscar_coordenadas_terreno(terreno,decimal):
+    if decimal:
+        return [terreno[4][2][0][0],terreno[4][2][0][1],terreno[4][2][1][0],terreno[4][2][1][1]]
+    return [terreno[4][0][0],terreno[4][0][1],terreno[4][1][0],terreno[4][1][1]]
+
+"""
+calcular terreno territorio, aqui se va a calcular 
+el terreno de un territo dado con su lista
+1 grado= 600 km lineales
+1 min= 10 km lin
+1 seg= 0.167 Km lin
+Area= Base * Altura
+"""
+#E: una lista con la inforamacion del terreno
+#S: Area del terreno
+def calcular_terreno_territorio(terreno):    
+    coordenadas= buscar_coordenadas_terreno(terreno,False)
+    longitud1= abs(coordenadas[0][0]*600)+coordenadas[0][1]*10+coordenadas[0][2]*0.167
+    latitud1= abs(coordenadas[1][0]*600)+coordenadas[1][1]*10+coordenadas[1][2]*0.167
+    longitud2= abs(coordenadas[2][0]*600)+coordenadas[2][1]*10+coordenadas[2][2]*0.167
+    latitud2= abs(coordenadas[3][0]*600)+coordenadas[3][1]*10+coordenadas[3][2]*0.167
+    if coordenadas[0][0]<0:
+        longitud1*=-1
+    if coordenadas[1][0]<0:
+        latitud1*=-1
+    if coordenadas[2][0]<0:
+        longitud2*=-1
+    if coordenadas[3][0]:
+        latitud2*=-1
+
+    base= abs(longitud1-longitud2)
+    altura= abs(latitud1-latitud2)
+    return base * altura
+    
+"""
+crear vida territorio, esta funcion va a meter de forma ordenada
+toda la informacion respectiva sobre el terreno
+del territorio dado
+"""
+#E: La lista del territorio
+#S: Una lis con el terreno y vida del territori
+def crear_vida_territorio(territorio):
+    area=calcular_terreno_territorio(territorio)
+    return [territorio[0],area,area,100]
+
+"""
+crear vida provincia, esta funcion va a meter de forma ordenada
+toda la informacion respectiva sobre el terreno
+de cada provincia por pais
+"""
+#E: la lista del pais
+#S: Una lista con las provicias con su terreno y vida
+def crear_vida_provincias(pais,num_pais):
+    global terrenos
+    i=0
+    provincia= pais[0][0]
+    terrenos_provincias=[[provincia,0,0,100,[]]]
+    for territorio in terrenos:
+        if territorio[1]==num_pais:
+            if pais[territorio[2]][0]!=provincia:
+                i+=1
+                provincia=pais[territorio[2]][0]
+                terrenos_provincias.append([provincia,0,0,100,[]])
+            terreno= crear_vida_territorio(territorio)
+            terrenos_provincias[i][4].append([terreno])
+            terrenos_provincias[i][1]+=terreno[1]
+            terrenos_provincias[i][2]+=terreno[2]
+    return terrenos_provincias
+                   
+    
+"""
+crear vida paises, esta funcion va a meter de forma ordenada
+toda la informacion respectiva sobre el terreno 
+de cada pais
+"""
+def crear_vida_paises():
+    global vida_paises,mapa
+    num_pais=0
+    for pais in mapa:
+        vida_paises.append([pais[0],crear_vida_provincias(pais[1],num_pais)])
+        num_pais+=1
+            
+        
+        
+        
+    
+
+    
+
+
+
+
 """
 Buscar misil, esta funcion con un número que le den
 debera buscar cuales misiles comparten esa clave
 """
-#E: Un numero entero positivo
-#S: La lista de [[Pais,tipo,cantidad de misiles con esa clave],...]
-#R:
 def buscar_misiles():
     global misiles,clave,misiles_con_x_clave
     misiles_con_x_clave=[]
@@ -124,6 +251,22 @@ def crea_mensaje_misiles():
         mensaje+= str(pais[0])+", "+str(pais[1])+", "+str(pais[2])+" | "
     mensaje= mensaje[0:-3] +"."
     return mensaje
+
+"""
+Atino el disparo, esta funcion dice si 
+el disparo realizado quedo dentro de un 
+territorio o no
+"""
+#S: Retorna la lista del territorio que pego o una lista vacia 
+def atino_el_disparo():
+    global x,y,terrenos
+    print(x,y)
+    for territorio in terrenos:
+        coordenadas= buscar_coordenadas_terreno(territorio,True)
+        print(coordenadas)
+        if ((coordenadas[0]<= x <=coordenadas[2])and (coordenadas[3]<= y <=coordenadas[1])) :
+            return territorio
+    return []
      
 #------------
 #Funciones para entradas
@@ -132,22 +275,25 @@ def crea_mensaje_misiles():
 #Pedir una cantidad de misiles
 def pedir_misiles():
     global misiles_con_x_clave,entrada,cuenta
-    pais=misiles_con_x_clave[0]
     if misiles_con_x_clave==[]:
         cuenta==9
-    var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
-    if not es_entero(entrada):
-        if entrada=="":
-            pass
-        else:
-            var_error.set("Error! solo se aceptan números enteros positivos")
     else:
-        entrada=int(entrada)
-        if entrada>pais[2]:
-         var_error.set(f"Error! solo puedes lanzar de 0 a {pais[2]} misiles")
+        pais=misiles_con_x_clave[0]
+        var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
+        if not es_entero(entrada):
+            if entrada=="":
+                pass
+            else:
+                var_error.set("Error! solo se aceptan números enteros positivos")
         else:
-            cuenta+=0.5
-            submenu_IA_aleatoria()
+            entrada=int(entrada)
+            if entrada>pais[2]:
+             var_error.set(f"Error! solo puedes lanzar de 0 a {pais[2]} misiles")
+            else:
+                cuenta+=0.5
+                misiles_con_x_clave=misiles_con_x_clave[1:]
+                var_error.set("")
+                submenu_IA_aleatoria()
         
 
 #Pedir un grado
@@ -221,8 +367,9 @@ def armar_punto():
     elif pedir_un_punto() and cuenta<8:
         y.append(entrada)
         cuenta+=1
-    print(x,y)
     indicar_entradas_punto()
+    if cuenta==8:
+        submenu_IA_aleatoria()
     
 
 #------------
@@ -318,25 +465,10 @@ def mostrar_botones():
 
 #Cargar mapa (graficar los territorios)
 def cargar_mapa():
-    global mapa,terrenos,PATH_MAPA
-    i=1
-    for pais in mapa:  #Aqui se saca el pais
-        i=1
-        for provincia in pais[i]: #aqui se saca la provincia pero primero
-            if type(provincia)==str: #Se debe pasar el nombre
-                pass
-            else:
-                for territorios in provincia: #Aqui es lo mismo que con la provincia
-                    if type(territorios)== str:
-                        pass
-                    else:
-                        for territorio in territorios:
-                            x1= 472 + convertir_coordenadas_a_decimales(territorio[1][0][0])
-                            y1= 314 - convertir_coordenadas_a_decimales(territorio[1][0][1])
-                            x2= 472 + convertir_coordenadas_a_decimales(territorio[1][1][0])
-                            y2= 314 - convertir_coordenadas_a_decimales(territorio[1][1][1])
-                            terrenos.append([canvas.create_rectangle(x1,y1,x2,y2,outline="red"),territorio[0]])
-            i+=1  
+    global terrenos
+    for terreno in terrenos:
+        coordenadas= buscar_coordenadas_terreno(terreno,True)
+        canvas.create_rectangle(coordenadas[0],coordenadas[1],coordenadas[2],coordenadas[3],outline="red")
 
 #Mostrar menu para introducir
 def mostrar_introducir():
@@ -362,16 +494,29 @@ def mostrar_misiles_clave():
 #Mostrar disparo en en el mapa
 def mostrar_disparo():
     global x,y
-    x1= convertir_coordenadas_a_decimales(x)
-    y1= convertir_coordenadas_a_decimales(y)
-    canvas.create_oval(x1-10,y1-10,x1+10,y1+10,fill="black")
+    x= 472 + convertir_coordenadas_a_decimales(x) #Aqui de una vez se pasan los valores a decimales
+    y= 314 - convertir_coordenadas_a_decimales(y)
+    canvas.create_oval(x-7,y-7,x+7,y+7,fill="black")
+    
+#Indicar si el disparo conecto con un territos
+def pego_el_disparo():
+    territorio= atino_el_disparo()
+    if territorio==[]:
+        var_mensaje.set("La IA fallo el disparo")
+    else:
+        pais=mapa[territorio[1]][0]
+        provincia= mapa[territorio[1]][1][territorio[2]][0]
+        nombre_territorio= territorio[0]
+        var_mensaje.set(f"La IA acerto el disparo en {nombre_territorio} de la provincia {provincia} del pais {pais}")
+
+
 #########################
 #Funciones de submenus
 #########################
                
 #Submenu IA Aleatoria
 def submenu_IA_aleatoria():
-    global cuenta,misiles_con_x_clave
+    global cuenta,misiles_con_x_clave,x,y
     if cuenta==0:
         mostrar_misiles_clave()
         boton_continuar.pack()
@@ -391,8 +536,14 @@ def submenu_IA_aleatoria():
         mostrar_introducir()
         armar_punto()
     elif cuenta==8:
+        ocultar_introducir()
         mostrar_disparo()
-        
+        pego_el_disparo()
+        x=[]
+        y=[]
+        cuenta=0  
+        boton_continuar.pack() 
+            
         
             
         
@@ -407,7 +558,7 @@ def submenu_IA_aleatoria():
 """
 Aqui se va abrir el menu donde
 la IA debe adivinar un codigo y 
-lanzar un mizil
+lanzar un misil
 """
 def IA_aleatoria():
     global opicion,punto,cuenta,x,y,entrada,clave
@@ -438,16 +589,18 @@ def menu_principal():
 def continuar():
     global cuenta
     cuenta+=1
-    menu_principal()
     boton_continuar.pack_forget()
+    menu_principal()
+    
 
     
 #########################
-#Cargar archivos
+#Cargar archivos y otros
 #########################    
     
 mapa= cargar(PATH_MAPA)
 misiles= cargar(PATH_MISILES)
+conseguir_territorios()
 
 #########################
 #Ventana
@@ -493,5 +646,7 @@ boton_menu_principal= tk.Button(root,text="introducir",command=menu_principal)
 
 #Entrada
 campo_entrada=tk.Entry(root,textvariable=var_entrada)
+crear_vida_paises()
+print(vida_paises)
 
 root.mainloop()
