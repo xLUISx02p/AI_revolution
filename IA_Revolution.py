@@ -15,7 +15,7 @@ PATH_MISILES="misiles.txt"
 
 mapa=[] #Aqui se cargan los puntos del mapa
 misiles=[] #Aqui se cargan los misiles
-misiles_con_x_clave=[] #Aqui se guardan los misiles con la clave dada
+misiles_con_x_clave=[['Costa Rica', 'Balistico', 40,23], ['Panama', 'Ojiva', 23]] #Aqui se guardan los misiles con la clave dada
 terrenos=[] #Aqui esta la ubicacion de los terrenos en la lista mapa y sus puntos
 vida_paises=[]#Aqui va estar la vida y territorio de los paises[[pais1,terreno_total,terreno_restante,vida,[[provincia1,terreno_total,terreno_restante,vida,[[territorio1,terreno_total,terreno_restante,vida],[territorio1,terreno_total,terreno_restante,vida]],[provincia2...]],[pais2,[...]]
 botones=[] #Aqui se guardan los botones del menu
@@ -67,9 +67,9 @@ def es_entero(value):
 #------------
 
 #Guardar un archivo
-def guardar(ruta,destino):
+def guardar(ruta,elemento):
     with open(ruta,"w") as file:
-        file.write(str(destino))
+        file.write(str(elemento))
 
 #Cargar un archivo
 def cargar(ruta):
@@ -166,7 +166,7 @@ def calcular_terreno_territorio(terreno):
         latitud1*=-1
     if coordenadas[2][0]<0:
         longitud2*=-1
-    if coordenadas[3][0]:
+    if coordenadas[3][0]<0:
         latitud2*=-1
 
     base= abs(longitud1-longitud2)
@@ -218,17 +218,13 @@ def crear_vida_paises():
     global vida_paises,mapa
     num_pais=0
     for pais in mapa:
-        vida_paises.append([pais[0],crear_vida_provincias(pais[1],num_pais)])
+        vida_paises.append([pais[0],0,0,100,[]])
+        terrenos_provincias=crear_vida_provincias(pais[1],num_pais)
+        for provincia in terrenos_provincias:
+            vida_paises[num_pais][1]+= provincia[1]
+            vida_paises[num_pais][2]+= provincia[2]
+        vida_paises[num_pais][4].append(terrenos_provincias)
         num_pais+=1
-            
-        
-        
-        
-    
-
-    
-
-
 
 
 """
@@ -241,7 +237,7 @@ def buscar_misiles():
     for pais in misiles:
         for misil in pais[3]:
             if misil[4]==clave:
-                misiles_con_x_clave.append([pais[0],misil[0],misil[3]])
+                misiles_con_x_clave.append([pais[0],misil[0],misil[3],misil[4]])
 
 #Crear mensaje para los misiles encontrados
 def crea_mensaje_misiles():
@@ -267,7 +263,19 @@ def atino_el_disparo():
         if ((coordenadas[0]<= x <=coordenadas[2])and (coordenadas[3]<= y <=coordenadas[1])) :
             return territorio
     return []
-     
+
+#Actualizar misiles
+#E: Un entero que es la cantidad de esos misiles gastados
+
+def actualizar_cantidad_misiles(gastados):
+    global misiles_con_x_clave,misiles
+    for pais in misiles:
+        if pais[0]==misiles_con_x_clave[0][0]:
+            for misil in pais[3]:
+                if misiles_con_x_clave[0][3]==misil[4]:
+                    misil[3]-=gastados
+    guardar(PATH_MISILES,misiles)
+
 #------------
 #Funciones para entradas
 #------------
@@ -291,6 +299,7 @@ def pedir_misiles():
              var_error.set(f"Error! solo puedes lanzar de 0 a {pais[2]} misiles")
             else:
                 cuenta+=0.5
+                actualizar_cantidad_misiles(entrada)
                 misiles_con_x_clave=misiles_con_x_clave[1:]
                 var_error.set("")
                 submenu_IA_aleatoria()
@@ -601,6 +610,7 @@ def continuar():
 mapa= cargar(PATH_MAPA)
 misiles= cargar(PATH_MISILES)
 conseguir_territorios()
+crear_vida_paises()
 
 #########################
 #Ventana
@@ -646,7 +656,5 @@ boton_menu_principal= tk.Button(root,text="introducir",command=menu_principal)
 
 #Entrada
 campo_entrada=tk.Entry(root,textvariable=var_entrada)
-crear_vida_paises()
-print(vida_paises)
 
 root.mainloop()
