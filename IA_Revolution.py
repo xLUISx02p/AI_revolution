@@ -1,6 +1,6 @@
 #Importacion de librerias
 import tkinter as tk
-import random as rnd
+import random
 
 #########################
 #Constantes
@@ -8,6 +8,7 @@ import random as rnd
 
 PATH_MAPA= "mapa.txt"
 PATH_MISILES="misiles.txt"
+PATH_BITACORA="bitácora.txt"
 
 #########################
 #Variables globales
@@ -15,9 +16,14 @@ PATH_MISILES="misiles.txt"
 
 mapa=[] #Aqui se cargan los puntos del mapa
 misiles=[] #Aqui se cargan los misiles
+bitacora=[] #Aqui se cargan los disparos realizados
 misiles_con_x_clave=[['Costa Rica', 'Balistico', 40,23], ['Panama', 'Ojiva', 23]] #Aqui se guardan los misiles con la clave dada
 terrenos=[] #Aqui esta la ubicacion de los terrenos en la lista mapa y sus puntos
 vida_paises=[]#Aqui va estar la vida y territorio de los paises[[pais1,terreno_total,terreno_restante,vida,[[provincia1,terreno_total,terreno_restante,vida,[[territorio1,terreno_total,terreno_restante,vida],[territorio1,terreno_total,terreno_restante,vida]],[provincia2...]],[pais2,[...]]
+disparo_grafica=[] #Aqui se va a guarda el punto del canva para luego borrarlo
+misiles_disparados=0
+pais_misil=""
+tipo_misil=""
 botones=[] #Aqui se guardan los botones del menu
 misil_danho=0 #Aqui se guarda el danho del misil
 x=[] #Se guarda una longitud
@@ -73,12 +79,15 @@ def guardar(ruta,elemento):
 
 #Cargar un archivo
 def cargar(ruta):
-    with open(ruta,"r") as file:
-        lista_str=file.read()
-        if is_lista(lista_str):
-            return eval(lista_str)
-        else:
-            return []
+    try:
+        with open(ruta,"r") as file:
+            lista_str=file.read()
+            if is_lista(lista_str):
+                return eval(lista_str)
+            else:
+                return []
+    except:
+        return []
 
 #------------
 #Algoritmos
@@ -143,6 +152,8 @@ def buscar_coordenadas_terreno(terreno,decimal):
     if decimal:
         return [terreno[4][2][0][0],terreno[4][2][0][1],terreno[4][2][1][0],terreno[4][2][1][1]]
     return [terreno[4][0][0],terreno[4][0][1],terreno[4][1][0],terreno[4][1][1]]
+
+#-------------------------------------------------------------------------------------
 
 """
 calcular terreno territorio, aqui se va a calcular 
@@ -225,7 +236,7 @@ def crear_vida_paises():
             vida_paises[num_pais][2]+= provincia[2]
         vida_paises[num_pais][4].append(terrenos_provincias)
         num_pais+=1
-
+#---------------------------------------------------------------------------------------
 
 """
 Buscar misil, esta funcion con un número que le den
@@ -254,29 +265,51 @@ def crea_mensaje_misiles():
 #E: El territorio golpeado(lista) y el daño(entero)
 def bajar_vida(territorio_golpe,danho):
     global vida_paises
-    num_pais=0
-    num_provincia=0
-    num_territorio=0
-    for pais in vida_paises:
-        print(pais)
-        if num_pais==territorio_golpe[1]:
-            num_provincia=0
-            for provincia in pais[4][0]:
-                if num_provincia==territorio_golpe[2]:
-                    num_territorio=0
-                    for territorio in provincia[4]:
-                        if num_territorio==territorio_golpe[3]:
-                            territorio[2]-=danho
-                            territorio[3]= territorio[2]/territorio[1]*100
-                            provincia[2]-=danho
-                            provincia[3]= provincia[2]/provincia[1]*100
-                            pais[2]-=danho
-                            pais[3]=pais[2]/pais[1]*100
-                            print(vida_paises)
+    pais=vida_paises[territorio_golpe[1]]
+    provincia=pais[4][0][territorio_golpe[2]]
+    territorio=provincia[4][territorio_golpe[3]]
+
+    territorio[2]-=danho
+    territorio[3]=round(territorio[2]/territorio[1]*100,2)
+    provincia[2]-=danho
+    provincia[3]=round(provincia[2]/provincia[1]*100,2)
+    pais[2]-=danho
+    pais[3]=round(pais[2]/pais[1]*100,2)
+    
+#---------------------------------------------------------------------------------------
+
+"""
+Cargar partida,
+Hace que si hay una partida guardada, se cargue y se actualice la vida de los paises
+"""
+def cargar_partida():
+    global bitacora,misiles,vida_paises
+    if bitacora==[]:
+        return
+    for registro in bitacora:
+        if registro[5]!=[]:   
+            pais_misil=registro[2]
+            tipo_misil=registro[3]
+            cantidad=registro[1]
+            informacion_acierto=registro[5]
+
+            danho_por_misil=0
+            for pais in misiles:
+                if pais[0]==pais_misil:
+                    for misil in pais[3]:
+                        if misil[0]==tipo_misil:
+                            danho_por_misil=misil[1]
                             break
-                        num_territorio+=1
-                num_provincia+=1
-            num_pais+=1
+
+            if danho_por_misil != 0:
+                for territorio in terrenos:
+                    if (territorio[0]==informacion_acierto[2]
+                            and mapa[territorio[1]][0]==informacion_acierto[0]
+                            and mapa[territorio[1]][1][territorio[2]][0]==informacion_acierto[1]):
+                        bajar_vida(territorio,cantidad*danho_por_misil)
+                        break
+
+#---------------------------------------------------------------------------------------
             
 """
 Atino el disparo, esta funcion dice si 
@@ -286,9 +319,13 @@ territorio o no
 #S: Retorna la lista del territorio que pego o una lista vacia 
 def atino_el_disparo():
     global x,y,terrenos,misil_danho
+    x_mapa=472 + convertir_coordenadas_a_decimales(x)
+    y_mapa=314 - convertir_coordenadas_a_decimales(y)
     for territorio in terrenos:
         coordenadas= buscar_coordenadas_terreno(territorio,True)
-        if ((coordenadas[0]<= x <=coordenadas[2])and (coordenadas[3]<= y <=coordenadas[1])) :
+        x_min,x_max=sorted([coordenadas[0],coordenadas[2]])
+        y_min,y_max=sorted([coordenadas[1],coordenadas[3]])
+        if x_min<=x_mapa<=x_max and y_min<=y_mapa<=y_max:
             bajar_vida(territorio,misil_danho)
             return territorio
     return []
@@ -303,7 +340,42 @@ def actualizar_cantidad_misiles(gastados):
             for misil in pais[3]:
                 if misiles_con_x_clave[0][3]==misil[4]:
                     misil[3]-=gastados
+                    pais[2]-=gastados
     guardar(PATH_MISILES,misiles)
+    
+#--------------------------------------------------------------------------
+#Obtener la informacion 
+#E: Una lista con el territorio
+#S: Una lista con el pais, provincia y territorio
+def obtener_informacion_acierto(territorio):
+    if territorio==[]:
+        return []
+    pais=mapa[territorio[1]][0]
+    provincia=mapa[territorio[1]][1][territorio[2]][0]
+    territorio_actual=mapa[territorio[1]][1][territorio[2]][1][territorio[3]][0]
+    return [pais,provincia,territorio_actual]
+
+#Actualizar bitacora
+#E: Una lista con el territorio
+def actualizar_bitacora(territorio):
+    global bitacora,opicion,misiles_disparados,pais_misil,tipo_misil,x,y
+    if opicion==1:
+        modo="Aleatorio"
+    elif opicion==2:
+        modo="Manual"
+    # Registro: modo, cantidad, pais, misil, coordenadas, acierto, informacion del acierto.
+    bitacora.append([
+            modo,
+            misiles_disparados,
+            pais_misil,
+            tipo_misil,
+            [x,y]])
+    i=len(bitacora)-1
+    if territorio!=[]:
+        bitacora[i].append(obtener_informacion_acierto(territorio))
+    else:
+        bitacora[i].append([])
+    guardar(PATH_BITACORA,bitacora)
 
 #------------
 #Funciones para entradas
@@ -311,9 +383,13 @@ def actualizar_cantidad_misiles(gastados):
 
 #Pedir una cantidad de misiles
 def pedir_misiles():
-    global misiles_con_x_clave,entrada,cuenta,misil_danho
+    global misiles_con_x_clave,entrada,cuenta,misil_danho,misiles_disparados,pais_misil,tipo_misil
+    borrar_disparo()
     if misiles_con_x_clave==[]:
-        cuenta==9
+        cuenta==0
+        label_mensaje.pack_forget()
+        ocultar_introducir()
+        mostrar_botones()
     else:
         pais=misiles_con_x_clave[0]
         var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
@@ -330,9 +406,12 @@ def pedir_misiles():
                 cuenta+=0.5
                 actualizar_cantidad_misiles(entrada)
                 misil_danho=pais[-1]*entrada
+                misiles_disparados=entrada
+                pais_misil=pais[0]
+                tipo_misil=pais[1]
                 misiles_con_x_clave=misiles_con_x_clave[1:]
                 var_error.set("")
-                submenu_IA_aleatoria()
+                submenu_IA()
         
 
 #Pedir un grado
@@ -408,7 +487,7 @@ def armar_punto():
         cuenta+=1
     indicar_entradas_punto()
     if cuenta==8:
-        submenu_IA_aleatoria()
+        submenu_IA()
     
 
 #------------
@@ -525,20 +604,30 @@ def mostrar_misiles_clave():
     global misiles_con_x_clave
     buscar_misiles()
     label_mensaje.pack()
-    if len(misiles_con_x_clave)==0:
+    if misiles_con_x_clave==[]:
         var_mensaje.set(f"La clave es {clave}\nNo se encontranron misiles con la clave {clave}")
     else:
         var_mensaje.set(f"La clave es {clave}\n{crea_mensaje_misiles()}")
      
 #Mostrar disparo en en el mapa
 def mostrar_disparo():
-    global x,y
-    x= 472 + convertir_coordenadas_a_decimales(x) #Aqui de una vez se pasan los valores a decimales
-    y= 314 - convertir_coordenadas_a_decimales(y)
-    canvas.create_oval(x-7,y-7,x+7,y+7,fill="black")
+    global x,y,disparo_grafica
+    x_mapa= 472 + convertir_coordenadas_a_decimales(x)
+    y_mapa= 314 - convertir_coordenadas_a_decimales(y)
+    tiro=canvas.create_oval(x_mapa-7,y_mapa-7,x_mapa+7,y_mapa+7,fill="Black")
+    disparo_grafica.append(tiro)
+    
+#Borrar disparo en el mapa    
+def borrar_disparo():
+    global disparo_grafica
+    if disparo_grafica!=[]:
+        canvas.delete(disparo_grafica[0])
+        disparo_grafica=[]
+    
     
 #Indicar si el disparo conecto con un territos
 def pego_el_disparo():
+    global misil_danho
     territorio= atino_el_disparo()
     if territorio==[]:
         var_mensaje.set("La IA fallo el disparo")
@@ -546,7 +635,9 @@ def pego_el_disparo():
         pais=mapa[territorio[1]][0]
         provincia= mapa[territorio[1]][1][territorio[2]][0]
         nombre_territorio= territorio[0]
-        var_mensaje.set(f"La IA acerto el disparo en {nombre_territorio} de la provincia {provincia} del pais {pais}")
+        porcentaje_vida= vida_paises[territorio[1]][4][0][territorio[2]][4][territorio[3]][3]
+        var_mensaje.set(f"La IA acerto el disparo en {nombre_territorio} de la provincia {provincia} del pais {pais}\nHizo un daño total de {misil_danho} en Km cuadrados y al territorio le queda un {porcentaje_vida}% de vida")
+    actualizar_bitacora(territorio)
 
 
 #########################
@@ -554,14 +645,13 @@ def pego_el_disparo():
 #########################
                
 #Submenu IA Aleatoria
-def submenu_IA_aleatoria():
+def submenu_IA():
     global cuenta,misiles_con_x_clave,x,y
     if cuenta==0:
         mostrar_misiles_clave()
-        boton_continuar.pack()
-        if len(misiles_con_x_clave)==0:
-            label_mensaje.pack_forget()
-            mostrar_botones()
+        if misiles_con_x_clave==[]:
+            cuenta=9
+        boton_continuar.pack()  
     elif 1==cuenta:
         mostrar_introducir()
         pedir_misiles()
@@ -582,6 +672,11 @@ def submenu_IA_aleatoria():
         y=[]
         cuenta=0  
         boton_continuar.pack() 
+    elif cuenta==10:
+        cuenta=0
+        label_mensaje.pack_forget()
+        mostrar_botones()
+        
             
         
             
@@ -607,19 +702,19 @@ def IA_aleatoria():
     y=[]
     cuenta=0
     entrada=""
-    opicion=2
+    opicion=1
     var_entrada.set("")
     var_error.set("")
     ocultar_botones()
-    clave=23
+    clave= random.randint(0,100)
     menu_principal()
     
     
 def menu_principal():
     global entrada,opicion
     entrada= var_entrada.get()
-    if opicion==2:
-        submenu_IA_aleatoria()    
+    if opicion==1:
+        submenu_IA()    
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -639,8 +734,10 @@ def continuar():
     
 mapa= cargar(PATH_MAPA)
 misiles= cargar(PATH_MISILES)
+bitacora= cargar(PATH_BITACORA)
 conseguir_territorios()
 crear_vida_paises()
+cargar_partida()
 
 #########################
 #Ventana
@@ -671,8 +768,8 @@ cargar_mapa()
 
 #Labels
 
-label_mensaje=tk.Label(root,textvariable=var_mensaje,bg="#3CF1E8")
-label_error=tk.Label(root,textvariable=var_error,bg="#3CF1E8")
+label_mensaje=tk.Label(root,textvariable=var_mensaje,bg="#3CF1E8",font=("arial",10))
+label_error=tk.Label(root,textvariable=var_error,bg="#3CF1E8",font=("arial",10))
 
 #Botones
 
@@ -686,6 +783,4 @@ boton_menu_principal= tk.Button(root,text="introducir",command=menu_principal)
 
 #Entrada
 campo_entrada=tk.Entry(root,textvariable=var_entrada)
-print(vida_paises)
-
 root.mainloop()
