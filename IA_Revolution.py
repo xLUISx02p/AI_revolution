@@ -192,7 +192,7 @@ def calcular_terreno_territorio(terreno):
 
     base= abs(longitud1-longitud2)
     altura= abs(latitud1-latitud2)
-    return base * altura
+    return round(base * altura,2)
     
 """
 crear vida territorio, esta funcion va a meter de forma ordenada
@@ -395,33 +395,31 @@ def actualizar_bitacora(territorio):
 def pedir_misiles():
     global misiles_con_x_clave,entrada,cuenta,misil_danho,misiles_disparados,pais_misil,tipo_misil
     borrar_disparo()
-    if misiles_con_x_clave==[]:
-        cuenta==0
-        label_mensaje.grid_forget()
-        ocultar_introducir()
-        mostrar_botones()
+    pais=misiles_con_x_clave[0]
+    var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
+    if not es_entero(entrada):
+        if entrada!="":
+            var_error.set("Error! solo se aceptan números enteros positivos")
     else:
-        pais=misiles_con_x_clave[0]
-        var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
-        if not es_entero(entrada):
-            if entrada=="":
-                pass
-            else:
-                var_error.set("Error! solo se aceptan números enteros positivos")
+        entrada=int(entrada)
+        if entrada>pais[2] or entrada<0:
+         var_error.set(f"Error! solo puedes lanzar de 0 a {pais[2]} misiles")
+        elif entrada==0:
+            var_mensaje.set(f"No se lanzo ningun misil {pais[1]} de {pais[0]}")
+            cuenta=0
+            var_entrada.set("")
+            boton_continuar.grid()
+            ocultar_introducir()
         else:
-            entrada=int(entrada)
-            if entrada>pais[2]:
-             var_error.set(f"Error! solo puedes lanzar de 0 a {pais[2]} misiles")
-            else:
-                cuenta+=0.5
-                actualizar_cantidad_misiles(entrada)
-                misil_danho=pais[-1]*entrada
-                misiles_disparados=entrada
-                pais_misil=pais[0]
-                tipo_misil=pais[1]
-                misiles_con_x_clave=misiles_con_x_clave[1:]
-                var_error.set("")
-                submenu_IA()
+            cuenta+=0.5
+            actualizar_cantidad_misiles(entrada)
+            misil_danho=pais[-1]*entrada
+            misiles_disparados=entrada
+            pais_misil=pais[0]
+            tipo_misil=pais[1]
+            var_error.set("")
+            submenu_IA()
+        misiles_con_x_clave=misiles_con_x_clave[1:]
         
 #-------------------------------------------------------------------
 #Pedir un grado
@@ -511,7 +509,7 @@ def pedir_clave():
         var_error.set("")
         var_entrada.set("")
         clave=entrada
-        cuenta+=1
+        cuenta+=1.5
         ocultar_introducir()
         submenu_IA()
     elif entrada!="":
@@ -675,6 +673,26 @@ def pego_el_disparo():
         var_mensaje.set(f"La IA acerto el disparo en {nombre_territorio} de la provincia {provincia} del pais {pais}\nHizo un daño total de {misil_danho} en Km cuadrados y al territorio le queda un {porcentaje_vida}% de vida")
     actualizar_bitacora(territorio)
 
+"""
+Mostrar Territorios,
+Esta funcion muestra el pais % de vida Km2 y Km2 muertos
+luego va con las provincias y por ultimo los territorios
+"""
+def mostrar_territorios():
+    global vida_paises
+    mensaje=""
+    for pais in vida_paises:
+        mensaje+= F"{pais[0]:<20} \t{pais[3]:<5} % de vida\t\t{pais[1]:<15} Km2\t{pais[1]-pais[2]:<15} Km2 muertos\n"
+        for provincia in pais[4][0]:
+            mensaje+= F"\t{provincia[0]:<20} \t{provincia[3]:<5} % de vida\t\t{provincia[1]:<13} Km2\t{provincia[1]-provincia[2]:<13} Km2 muertos\n"
+            for territorio in provincia[4]:
+                mensaje+= F"\t\t{territorio[0]:<20} \t{territorio[3]:<5} % de vida\t\t{territorio[1]:<13} Km2\t{territorio[1]-territorio[2]:<13} Km2 muertos\n"
+        mensaje+="\n"
+    mensaje=mensaje[:-2]
+    var_mensaje.set(mensaje)
+    label_mensaje.config(font=("consolas",10),justify="left")
+    label_mensaje.grid()
+    
 
 #########################
 #Funciones de submenus
@@ -683,7 +701,7 @@ def pego_el_disparo():
 #Submenu IA Aleatoria
 def submenu_IA():
     global cuenta,misiles_con_x_clave,x,y
-    if cuenta==-1:
+    if cuenta==-1.5:
         mostrar_introducir()
         var_mensaje.set("Introduce la clave de los misiles que desea disparar")
         pedir_clave()
@@ -693,8 +711,21 @@ def submenu_IA():
             cuenta=9
         boton_continuar.grid()  
     elif 1==cuenta:
-        mostrar_introducir()
-        pedir_misiles()
+        if misiles_con_x_clave==[]:
+            cuenta=0
+            label_mensaje.grid_forget()
+            ocultar_introducir()
+            mostrar_botones()
+        elif misiles_con_x_clave[0][2]==0:
+            cuenta=0
+            var_mensaje.set(f"El pais {misiles_con_x_clave[0][0]} ya no tiene mas misiles {misiles_con_x_clave[0][1]}")
+            ocultar_introducir()
+            boton_continuar.grid()
+            misiles_con_x_clave=misiles_con_x_clave[1:]
+        else:
+            mostrar_introducir()
+            pedir_misiles()
+        
     elif 1.5==cuenta:
         ocultar_introducir()
         var_entrada.set("")
@@ -715,7 +746,23 @@ def submenu_IA():
     elif cuenta==10:
         cuenta=0
         label_mensaje.grid_forget()
-        mostrar_botones()            
+        mostrar_botones()  
+        
+#submenu mostrar territorios   
+def submenu_mostrar_territorios():
+    global cuenta
+    if cuenta==0:
+        mostrar_territorios()
+        boton_continuar.grid()
+        canvas.pack_forget()
+    elif cuenta==1:
+        cuenta=0
+        label_mensaje.grid_forget()
+        label_mensaje.config(font=("Arial",10),justify="center")
+        frame_labels_botones.pack_forget()
+        canvas.pack()
+        frame_labels_botones.pack()
+        mostrar_botones()       
 
 
 #########################
@@ -740,7 +787,7 @@ def IA_aleatoria():
     var_entrada.set("")
     var_error.set("")
     ocultar_botones()
-    clave= random.randint(0,100)
+    clave= random.randint(1,99)
     menu_principal()
     
 def IA_Manual():
@@ -749,7 +796,7 @@ def IA_Manual():
     punto=[]
     x=[]
     y=[]
-    cuenta=-1
+    cuenta=-1.5
     entrada=""
     opicion=2
     var_entrada.set("")
@@ -757,13 +804,20 @@ def IA_Manual():
     ocultar_botones()
     menu_principal()
     
+def menu_mostrar_territorios():
+    global opicion,cuenta
+    cuenta=0
+    opicion=3
+    ocultar_botones()
+    menu_principal()
+    
 def menu_principal():
     global entrada,opicion
     entrada= var_entrada.get()
-    if opicion==1:
-        submenu_IA()
-    elif opicion==2: 
-        submenu_IA()   
+    if opicion==1 or opicion==2:
+        submenu_IA()  
+    elif opicion==3:
+        submenu_mostrar_territorios() 
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -832,7 +886,7 @@ boton_IA_auto= tk.Button(frame_labels_botones,text="IA Aleatoria",command=IA_ale
 
 boton_IA_manual= tk.Button(frame_labels_botones,text="IA Manual",command=IA_Manual)
 
-boton_lista_de_territorios=tk.Button(frame_labels_botones,text="Lista de territorios")
+boton_lista_de_territorios=tk.Button(frame_labels_botones,text="Lista de territorios",command=menu_mostrar_territorios)
 
 boton_ranking_de_paises_extensión=tk.Button(frame_labels_botones,text="Ranking de países por extensión")
 
@@ -859,4 +913,5 @@ boton_continuar=tk.Button(frame_labels_botones,text="Continuar",command=continua
 boton_menu_principal= tk.Button(frame_labels_botones,text="introducir",command=menu_principal) 
 #Entrada
 campo_entrada=tk.Entry(frame_labels_botones,textvariable=var_entrada)
+
 root.mainloop()
