@@ -111,6 +111,11 @@ def convertir_coordenadas_a_decimales(coordenadas):
         return -1*coordenada_decimal
     return coordenada_decimal
 
+"""
+Conseguir territorios,
+Guarda en la lista terrenos la ubicacion de los territorios en la lista mapa y sus dos puntos
+"""
+
 def conseguir_territorios():
     global mapa,terrenos
     num_pais=0
@@ -128,12 +133,17 @@ def conseguir_territorios():
                         pass
                     else:
                         for territorio in territorios:
-                            
                             x1= territorio[1][0][0]
                             y1= territorio[1][0][1]
                             x2= territorio[1][1][0]
                             y2= territorio[1][1][1]
-                            terrenos.append([territorio[0],num_pais,num_provincia,num_territorio,[[x1,y1],[x2,y2],[[472 +convertir_coordenadas_a_decimales(x1),314 -convertir_coordenadas_a_decimales(y1)],[472 +convertir_coordenadas_a_decimales(x2),314 -convertir_coordenadas_a_decimales(y2)]]]])#Esta lista me guarda el ubicacion del territorio en la lista con sus dos puntos tanto en grados y decimales 
+                            
+                            x1_decimal= convertir_coordenadas_a_decimales(x1)
+                            y1_decimal= convertir_coordenadas_a_decimales(y1)
+                            x2_decimal= convertir_coordenadas_a_decimales(x2)
+                            y2_decimal= convertir_coordenadas_a_decimales(y2)
+                            
+                            terrenos.append([territorio[0],num_pais,num_provincia,num_territorio,[[x1,y1],[x2,y2],[[472 +x1_decimal,314 -y1_decimal],[472 +x2_decimal,314 -y2_decimal]]]])#Esta lista me guarda el ubicacion del territorio en la lista con sus dos puntos tanto en grados y decimales 
                             num_territorio+=1
             num_provincia+=1
         num_pais+=1
@@ -387,7 +397,7 @@ def pedir_misiles():
     borrar_disparo()
     if misiles_con_x_clave==[]:
         cuenta==0
-        label_mensaje.pack_forget()
+        label_mensaje.grid_forget()
         ocultar_introducir()
         mostrar_botones()
     else:
@@ -413,7 +423,7 @@ def pedir_misiles():
                 var_error.set("")
                 submenu_IA()
         
-
+#-------------------------------------------------------------------
 #Pedir un grado
 #E: Pide el rango
 #S: True si se introduce correctamente y False sino
@@ -488,7 +498,25 @@ def armar_punto():
     indicar_entradas_punto()
     if cuenta==8:
         submenu_IA()
-    
+#-------------------------------------------------------------------   
+#Pedir una clave
+def pedir_clave():
+    global cuenta,clave,entrada
+    label_mensaje.grid(row=0,column=0,padx=10,pady=10)
+    if es_entero(entrada):
+        entrada=int(entrada)
+        if 0>entrada or entrada>99:
+            var_error.set("Solo se permiten numeros de 0 a 99")
+            return False
+        var_error.set("")
+        var_entrada.set("")
+        clave=entrada
+        cuenta+=1
+        ocultar_introducir()
+        submenu_IA()
+    elif entrada!="":
+        var_error.set("Error! eso no es valido")
+
 
 #------------
 #Funciones para la interfaz grafica
@@ -573,12 +601,20 @@ def crear_grafica():
 def ocultar_botones():
     global botones
     for boton in botones:
-        boton.pack_forget()
+        boton.grid_forget()
         
 def mostrar_botones():
     global botones
+    num_boton=0
+    arriba=True
     for boton in botones:
-        boton.pack()
+        if arriba:
+            boton.grid(row=1,column=num_boton,padx=20,pady=20)
+            arriba=False
+        else:
+            boton.grid(row=2,column=num_boton,padx=9,pady=20)
+            num_boton+=1
+            arriba=True
     
 
 #Cargar mapa (graficar los territorios)
@@ -590,20 +626,20 @@ def cargar_mapa():
 
 #Mostrar menu para introducir
 def mostrar_introducir():
-    campo_entrada.pack()
-    boton_menu_principal.pack()
-    label_error.pack()
+    campo_entrada.grid(row=1,column=0,padx=10,pady=10)
+    boton_menu_principal.grid(row=2,column=0,padx=10,pady=10)
+    label_error.grid(row=3,column=0,padx=10,pady=10)
     
 def ocultar_introducir():
-    campo_entrada.pack_forget()
-    boton_menu_principal.pack_forget()
-    label_error.pack_forget()
+    campo_entrada.grid_forget()
+    boton_menu_principal.grid_forget()
+    label_error.grid_forget()
     
 #Mostra los misiles con clave
 def mostrar_misiles_clave():
     global misiles_con_x_clave
     buscar_misiles()
-    label_mensaje.pack()
+    label_mensaje.grid(row=0,column=0,padx=10,pady=10)
     if misiles_con_x_clave==[]:
         var_mensaje.set(f"La clave es {clave}\nNo se encontranron misiles con la clave {clave}")
     else:
@@ -647,11 +683,15 @@ def pego_el_disparo():
 #Submenu IA Aleatoria
 def submenu_IA():
     global cuenta,misiles_con_x_clave,x,y
-    if cuenta==0:
+    if cuenta==-1:
+        mostrar_introducir()
+        var_mensaje.set("Introduce la clave de los misiles que desea disparar")
+        pedir_clave()
+    elif cuenta==0:
         mostrar_misiles_clave()
         if misiles_con_x_clave==[]:
             cuenta=9
-        boton_continuar.pack()  
+        boton_continuar.grid()  
     elif 1==cuenta:
         mostrar_introducir()
         pedir_misiles()
@@ -660,7 +700,7 @@ def submenu_IA():
         var_entrada.set("")
         var_mensaje.set("Ahora vamos a introducir un punto del mapa")
         cuenta-=0.5
-        boton_continuar.pack()
+        boton_continuar.grid()
     elif 2<=cuenta<=7:
         mostrar_introducir()
         armar_punto()
@@ -671,17 +711,11 @@ def submenu_IA():
         x=[]
         y=[]
         cuenta=0  
-        boton_continuar.pack() 
+        boton_continuar.grid() 
     elif cuenta==10:
         cuenta=0
-        label_mensaje.pack_forget()
-        mostrar_botones()
-        
-            
-        
-            
-        
-    
+        label_mensaje.grid_forget()
+        mostrar_botones()            
 
 
 #########################
@@ -709,12 +743,27 @@ def IA_aleatoria():
     clave= random.randint(0,100)
     menu_principal()
     
+def IA_Manual():
+    global opicion,punto,cuenta,x,y,entrada,clave
+    clave=0
+    punto=[]
+    x=[]
+    y=[]
+    cuenta=-1
+    entrada=""
+    opicion=2
+    var_entrada.set("")
+    var_error.set("")
+    ocultar_botones()
+    menu_principal()
     
 def menu_principal():
     global entrada,opicion
     entrada= var_entrada.get()
     if opicion==1:
-        submenu_IA()    
+        submenu_IA()
+    elif opicion==2: 
+        submenu_IA()   
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -723,7 +772,7 @@ def menu_principal():
 def continuar():
     global cuenta
     cuenta+=1
-    boton_continuar.pack_forget()
+    boton_continuar.grid_forget()
     menu_principal()
     
 
@@ -766,21 +815,48 @@ crear_grafica()
 canvas.create_text(475,20,text="Mapa mundial",font=("Arial",20))
 cargar_mapa()
 
+#Frame
+frame_labels_botones= tk.Frame(root,width=1000,height=200) 
+frame_labels_botones.pack() #Esto es para poder poner los botones en abajo del canva
+
 #Labels
 
-label_mensaje=tk.Label(root,textvariable=var_mensaje,bg="#3CF1E8",font=("arial",10))
-label_error=tk.Label(root,textvariable=var_error,bg="#3CF1E8",font=("arial",10))
+label_mensaje=tk.Label(frame_labels_botones,textvariable=var_mensaje,bg="#3CF1E8",font=("arial",10))
+label_error=tk.Label(frame_labels_botones,textvariable=var_error,bg="#3CF1E8",font=("arial",10))
 
 #Botones
 
-boton_IA_auto= tk.Button(root,text="IA Aleatoria",command=IA_aleatoria,)
-boton_IA_auto.pack()
-botones.append(boton_IA_auto)
+boton_cargar_mapa=tk.Button(frame_labels_botones,text="Cargar mapa")
 
-boton_continuar=tk.Button(root,text="Continuar",command=continuar)
+boton_IA_auto= tk.Button(frame_labels_botones,text="IA Aleatoria",command=IA_aleatoria,)
+
+boton_IA_manual= tk.Button(frame_labels_botones,text="IA Manual",command=IA_Manual)
+
+boton_lista_de_territorios=tk.Button(frame_labels_botones,text="Lista de territorios")
+
+boton_ranking_de_paises_extensión=tk.Button(frame_labels_botones,text="Ranking de países por extensión")
+
+boton_ranking_de_paises_vida=tk.Button(frame_labels_botones,text="Ranking de países por porcentaje de vida")
+
+boton_status_del_territorio=tk.Button(frame_labels_botones,text="Status del territorio")
+
+boton_consultar_historico_pais=tk.Button(frame_labels_botones,text="Consultar histórico de país")
+
+
+boton_mover_territorio_a_otro_pais=tk.Button(frame_labels_botones,text="Mover territorio a otro país")
+
+boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar territorios")
+
+boton_ganador=tk.Button(frame_labels_botones,text="Ganador")
+
+boton_salir=tk.Button(frame_labels_botones,text="Salir")
+
+botones=[boton_cargar_mapa,boton_IA_auto,boton_IA_manual,boton_lista_de_territorios,boton_ranking_de_paises_extensión,boton_ranking_de_paises_vida,boton_status_del_territorio,boton_consultar_historico_pais,boton_mover_territorio_a_otro_pais,boton_aniquilar_territorios,boton_ganador,boton_salir]
+mostrar_botones()
+
+boton_continuar=tk.Button(frame_labels_botones,text="Continuar",command=continuar)
     
-boton_menu_principal= tk.Button(root,text="introducir",command=menu_principal)
-
+boton_menu_principal= tk.Button(frame_labels_botones,text="introducir",command=menu_principal) 
 #Entrada
-campo_entrada=tk.Entry(root,textvariable=var_entrada)
+campo_entrada=tk.Entry(frame_labels_botones,textvariable=var_entrada)
 root.mainloop()
