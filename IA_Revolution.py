@@ -469,6 +469,7 @@ def pedir_misiles():
             var_entrada.set("")
             boton_continuar.grid()
             ocultar_introducir()
+            misiles_con_x_clave=misiles_con_x_clave[1:]
         else:
             cuenta+=0.5
             actualizar_cantidad_misiles(entrada)
@@ -477,8 +478,9 @@ def pedir_misiles():
             pais_misil=pais[0]
             tipo_misil=pais[1]
             var_error.set("")
+            misiles_con_x_clave=misiles_con_x_clave[1:]
             submenu_IA()
-        misiles_con_x_clave=misiles_con_x_clave[1:]
+        
         
 #-------------------------------------------------------------------
 #Pedir un grado
