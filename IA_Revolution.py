@@ -322,7 +322,18 @@ def cargar_partida():
                         break
 
 #---------------------------------------------------------------------------------------
-            
+     
+"""
+Esta adentro,
+Esta funcion dice si un punto esta dentro de un rectangulo
+"""
+#E: Un x,y como enteros en decimal y un rectangulo que es una lista
+#S: Un bool True si esta adentro y false sino
+def esta_adentro(x,y,rectangulo):
+    x_min,x_max=sorted([rectangulo[0],rectangulo[2]])
+    y_min,y_max=sorted([rectangulo[1],rectangulo[3]])
+    return x_min<=x<=x_max and y_min<=y<=y_max
+        
 """
 Atino el disparo, esta funcion dice si 
 el disparo realizado quedo dentro de un 
@@ -335,9 +346,7 @@ def atino_el_disparo():
     y_mapa=314 - convertir_coordenadas_a_decimales(y)
     for territorio in terrenos:
         coordenadas= buscar_coordenadas_terreno(territorio,True)
-        x_min,x_max=sorted([coordenadas[0],coordenadas[2]])
-        y_min,y_max=sorted([coordenadas[1],coordenadas[3]])
-        if x_min<=x_mapa<=x_max and y_min<=y_mapa<=y_max:
+        if esta_adentro(x_mapa,y_mapa,coordenadas):
             bajar_vida(territorio,misil_danho)
             return territorio
     return []
@@ -388,6 +397,55 @@ def actualizar_bitacora(territorio):
     else:
         bitacora[i].append([])
     guardar(PATH_BITACORA,bitacora)
+    
+#Buscar territorio
+#E: Una lista con la ubicacion del territorio en la lista terrenos
+#S: El territorio encontrado(lista)
+def buscar_territorio(territorio_escogido):
+    global terrenos
+    for territorio in terrenos:
+        if territorio_escogido[0]==territorio[1] and territorio_escogido[1]==territorio[2] and territorio_escogido[2]==territorio[3]:
+            return territorio    
+     
+#disparos recibidos en territorio
+#E: Un territorio lista
+#S: La cantidad de disparos recibidos
+def disparos_recibidos_en_territorio(territorio):
+    global bitacora
+    coordenadas=buscar_coordenadas_terreno(territorio,True)
+    i=0
+    for registro in bitacora:
+        coordenadas_disparo=registro[4]
+        x=472 + convertir_coordenadas_a_decimales(coordenadas_disparo[0])
+        y=314 - convertir_coordenadas_a_decimales(coordenadas_disparo[1])
+        if esta_adentro(x,y,coordenadas):
+            i+=1
+    return i
+
+#Disparos recibidos por provincia de x pais
+#E: Un numero que es la ubicacion del pais en la lista vida_paises
+#S: Una lista con la cantidad de disparos recibidos por provincia y territorio
+def disparos_por_provincia(num_pais):
+    pais=vida_paises[num_pais]
+    disparos_territorios=[]
+    disparos_provincia=[]
+    num_provincia=0
+    suma_disparos=0
+    i=0
+    for provincia in pais[4][0]:
+        disparos_territorios=[]
+        suma_disparos=0
+        disparos_provincia.append([provincia[0],0,disparos_territorios])
+        for terreno in terrenos:
+            if terreno[1]==num_pais and num_provincia== terreno[2]:
+                disparos=disparos_recibidos_en_territorio(terreno)
+                disparos_territorios.append([terreno[0],disparos])
+                suma_disparos+=disparos
+        disparos_provincia[i][1]=suma_disparos
+        num_provincia+=1
+        i+=1
+    return disparos_provincia
+
 
 #------------
 #Funciones para entradas
@@ -470,8 +528,8 @@ def pedir_un_punto():
     elif 3<=cuenta<=4 or 6<=cuenta<=7:
         return pedir_min_o_sec(rango[1])
 
-#Indicar las entradas
-#Estos van a ser los los mensajes del label
+#Indicar las entradas para un punto
+#Estos van a ser los los mensajes del label 
 def indicar_entradas_punto():
     global cuenta
     palabra="latitud"
@@ -517,37 +575,59 @@ def pedir_clave():
         var_error.set("Error! eso no es valido")
         
 #----------------------------------------------------------------
-#Pedir pais
-def pedir_pais():
-    global territorio_seleccionado,entrada,mensaje_validar,cuenta
+
+#Pedir pais, provincia o territorio
+#E: tipo es un string que indica si es pais, provincia o territorio lo que se pide y elementos es la lista de los elementos
+def pedir_pais_provincia_territorio(tipo,elementos):
+    global territorio_seleccionado,entrada,cuenta,mensaje_validar
     if not mensaje_validar:
-        mensaje="Introduce el número del pais para seleccionarlo:\n"
+        preposicion="de la" 
+        if tipo!="provincia" :
+            preposicion="del"
+        mensaje=f"Introduce el número {preposicion} {tipo} para seleccionarlo:\n"
         i=1
-        for pais in mapa:
-            mensaje+=F"{i}. {pais[0]}\n"
+        for elemento in elementos:
+            mensaje+=F"{i}. {elemento[0]}\n"
             i+=1
         mensaje=mensaje[:-1]
         var_mensaje.set(mensaje)
         label_mensaje.grid()
         mostrar_introducir()
+        mensaje_validar=True
     if es_entero(entrada):
         entrada=int(entrada)
-        if 1 <= entrada <= len(mapa):
+        if 1 <= entrada <= len(elementos):
             territorio_seleccionado.append(entrada-1)
             ocultar_introducir()
-            continuar()
+            mensaje_validar=False
             cuenta+=1
-            submenu_status_territorio()
+            var_error.set("")
+            var_entrada.set("")
+            menu_principal()
         else:
-            var_error.set(f"Solo se pueden números de 1 asta {len(mapa)}")
+            var_error.set(f"Solo se pueden números desde 1 asta {len(elementos)}")
     elif entrada!="":
         var_error.set("Error! eso no es valido")
-            
-       
-            
         
-    
+"""
+Escoger pais, provincia o territorio
+Si el caso de que solo haya un pais, provincia o territorio y no se pueda escoger lo pone automaticamente sino va a pedir el dato como se debe
+"""
+def escoger_pais_provincia_territorio(tipo,elementos):
+    global territorio_seleccionado,cuenta
+    if len(elementos)==1:
+        territorio_seleccionado.append(0)
+        preposicion="un"
+        if tipo=="provincia":
+            preposicion="una"
+        var_mensaje.set(f"Solo hay {preposicion} {tipo} por lo que se selecciono automaticamente {elementos[0][0]}")
+        cuenta+=0.5
+        boton_continuar.grid()
+        menu_principal()
+    else :
+        pedir_pais_provincia_territorio(tipo,elementos)
 
+    
 
 #------------
 #Funciones para la interfaz grafica
@@ -785,7 +865,34 @@ def mostrar_ranking_pais_extension_viva():
 #Mostrar pais seleccionado
 def mostrar_pais_seleccionado():
     global mapa,territorio_seleccionado
-    var_mensaje.set(f"Se seleccion correctamente el pais {mapa[territorio_seleccionado[0]][0]}")
+    var_mensaje.set(f"Se selecciono correctamente el pais {mapa[territorio_seleccionado[0]][0]}")
+    
+#Mostrar provincia seleccionada
+def mostrar_provincia_seleccionado():
+    global mapa,territorio_seleccionado
+    var_mensaje.set(f"Se selecciono correctamente la provincia {mapa[territorio_seleccionado[0]][1][territorio_seleccionado[1]][0]}")
+    
+def mostrar_status_territorio():
+    global  territorio_seleccionado,vida_paises
+    disparos_recibidos=disparos_recibidos_en_territorio(territorio_seleccionado)
+    porcentaje_vida= vida_paises[territorio_seleccionado[1]][4][0][territorio_seleccionado[2]][4][territorio_seleccionado[3]][3]
+    extension= vida_paises[territorio_seleccionado[1]][4][0][territorio_seleccionado[2]][4][territorio_seleccionado[3]][1]
+    var_mensaje.set(f"El territorio {territorio_seleccionado[0]} de la provincia {mapa[territorio_seleccionado[1]][1][territorio_seleccionado[2]][0]} del pais {mapa[territorio_seleccionado[1]][0]} tiene un {porcentaje_vida}% de vida, una extension de {extension} Km2 y ha recibido {disparos_recibidos} disparos")
+ 
+ 
+    
+#Mostrar consult historica del pais
+def mostrar_consulta_historica_pais():
+    global territorio_seleccionado,vida_paises,terrenos
+    num_pais=territorio_seleccionado[0]
+    pais=vida_paises[num_pais]
+    mensaje=f"{pais[0]:<20} \t{pais[1]:<15} Km2\t{pais[3]:<5} % de vida\n" 
+    disparos_provincia= disparos_por_provincia(num_pais)
+    for provincia in disparos_provincia:
+        mensaje+=f"\t{provincia[0]:<20} {provincia[1]} disparos recibidos\n"
+        for territorio in provincia[2]:
+            mensaje+=f"\t\t{territorio[0]:<20} {territorio[1]} disparos recibidos\n"
+    mostrar_mensaje(mensaje[:-1])
 
 #########################
 #Funciones de submenus
@@ -880,17 +987,53 @@ def submenu_mostrar_ranking_pais_extension_viva():
         frame_labels_botones.pack_configure(expand=False)
 
 def submenu_status_territorio():
-    global cuenta,entrada
+    global cuenta,entrada,territorio_seleccionado,mapa
     entrada= var_entrada.get()
     if cuenta==0:
-        pedir_pais()
-    elif cuenta==2:
+        escoger_pais_provincia_territorio("país",mapa)
+    elif cuenta==0.5:
+        cuenta+=0.5
+    elif cuenta==1:
         boton_continuar.grid()
         boton_continuar.configure(font=("Arial",15))
         mostrar_pais_seleccionado()
+    elif cuenta==1.5:
+        cuenta+=0.5
+    elif cuenta==2:
+        escoger_pais_provincia_territorio("provincia",mapa[territorio_seleccionado[0]][1])
+    elif cuenta==2.5:
+        cuenta+=0.5
     elif cuenta==3:
+        boton_continuar.grid()
+        boton_continuar.configure(font=("Arial",15))
+        mostrar_provincia_seleccionado()
+    elif cuenta==4:
+        provincia=mapa[territorio_seleccionado[0]][1][territorio_seleccionado[1]]
+        escoger_pais_provincia_territorio("territorio",provincia[1])
+    elif cuenta==4.5:
+        cuenta-=0.5
+    elif cuenta==5:
+        boton_continuar.grid()
+        boton_continuar.configure(font=("Arial",15))
+        territorio_seleccionado=buscar_territorio(territorio_seleccionado)
+        mostrar_status_territorio()
+    elif cuenta==6:
         cambiar_tamanho_introducir(10)
         boton_continuar.configure(font=("Arial",10))
+        frame_labels_botones.pack_configure(expand=False)
+        mostrar_botones_ocultar_mensaje()
+
+def submenu_consultar_historico_pais():
+    global cuenta,entrada
+    if cuenta==0:
+        entrada= var_entrada.get()
+        escoger_pais_provincia_territorio("país",mapa)
+    elif cuenta==0.5:
+        cuenta+=0.5 
+    elif cuenta==1:
+        mostrar_consulta_historica_pais()
+        boton_continuar.grid()
+    elif cuenta==2:
         frame_labels_botones.pack_configure(expand=False)
         mostrar_botones_ocultar_mensaje()
         
@@ -963,10 +1106,23 @@ def menu_status_territo():
     cuenta=0
     opicion=6
     territorio_seleccionado=[]
+    var_entrada.set("")
     ocultar_botones()
     cambiar_tamanho_introducir(15)
     label_mensaje.configure(font=("Arial",15))
     canvas.pack_forget()
+    frame_labels_botones.pack_configure(expand=True)
+    menu_principal()
+    
+def menu_consultar_historico_pais():
+    global opicion,cuenta,territorio_seleccionado
+    cuenta=0
+    opicion=7
+    territorio_seleccionado=[] 
+    ocultar_botones()
+    canvas.pack_forget()
+    cambiar_tamanho_introducir(15)
+    label_mensaje.configure(font=("Arial",15))
     frame_labels_botones.pack_configure(expand=True)
     menu_principal()
     
@@ -982,7 +1138,8 @@ def menu_principal():
         submenu_mostrar_ranking_pais_extension_viva()
     elif opicion == 6:
         submenu_status_territorio()
-        
+    elif opicion==7:
+        submenu_consultar_historico_pais()
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -1059,7 +1216,7 @@ boton_ranking_de_paises_vida=tk.Button(frame_labels_botones,text="Ranking de pa�
 
 boton_status_del_territorio=tk.Button(frame_labels_botones,text="Status del territorio",command=menu_status_territo,font=("Arial",10))
 
-boton_consultar_historico_pais=tk.Button(frame_labels_botones,text="Consultar histórico de país",font=("Arial",10))
+boton_consultar_historico_pais=tk.Button(frame_labels_botones,text="Consultar histórico de país",command=menu_consultar_historico_pais,font=("Arial",10))
 
 
 boton_mover_territorio_a_otro_pais=tk.Button(frame_labels_botones,text="Mover territorio a otro país",font=("Arial",10))
