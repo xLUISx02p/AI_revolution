@@ -29,6 +29,8 @@ misil_danho=0 #Aqui se guarda el danho del misil
 x=[] #Se guarda una longitud
 y=[] #Se guuarda una latitud
 clave=0 #Aqui se guarda la clave
+territorio_seleccionado=[] #Aqui se guardan los datos para seleccionar un territorio
+mensaje_validar=False #Una validacion para saber si se puso el mensaje
 entrada="" #Aqui se guarda lo que ingrese el usuario
 cuenta=0 #Esta cuenta es la que maneja los menus
 opicion=0 #Esto decide cual boton se apreto
@@ -394,7 +396,6 @@ def actualizar_bitacora(territorio):
 #Pedir una cantidad de misiles
 def pedir_misiles():
     global misiles_con_x_clave,entrada,cuenta,misil_danho,misiles_disparados,pais_misil,tipo_misil
-    borrar_disparo()
     pais=misiles_con_x_clave[0]
     var_mensaje.set(f"Del pais {pais[0]}, de los misiles {pais[1]}\nCuantos desea disparar")
     if not es_entero(entrada):
@@ -514,6 +515,38 @@ def pedir_clave():
         submenu_IA()
     elif entrada!="":
         var_error.set("Error! eso no es valido")
+        
+#----------------------------------------------------------------
+#Pedir pais
+def pedir_pais():
+    global territorio_seleccionado,entrada,mensaje_validar,cuenta
+    if not mensaje_validar:
+        mensaje="Introduce el número del pais para seleccionarlo:\n"
+        i=1
+        for pais in mapa:
+            mensaje+=F"{i}. {pais[0]}\n"
+            i+=1
+        mensaje=mensaje[:-1]
+        var_mensaje.set(mensaje)
+        label_mensaje.grid()
+        mostrar_introducir()
+    if es_entero(entrada):
+        entrada=int(entrada)
+        if 1 <= entrada <= len(mapa):
+            territorio_seleccionado.append(entrada-1)
+            ocultar_introducir()
+            continuar()
+            cuenta+=1
+            submenu_status_territorio()
+        else:
+            var_error.set(f"Solo se pueden números de 1 asta {len(mapa)}")
+    elif entrada!="":
+        var_error.set("Error! eso no es valido")
+            
+       
+            
+        
+    
 
 
 #------------
@@ -672,6 +705,27 @@ def pego_el_disparo():
         porcentaje_vida= vida_paises[territorio[1]][4][0][territorio[2]][4][territorio[3]][3]
         var_mensaje.set(f"La IA acerto el disparo en {nombre_territorio} de la provincia {provincia} del pais {pais}\nHizo un daño total de {misil_danho} en Km cuadrados y al territorio le queda un {porcentaje_vida}% de vida")
     actualizar_bitacora(territorio)
+    
+#mostrar mensaje
+def mostrar_mensaje(mensaje):  
+    var_mensaje.set(mensaje)
+    label_mensaje.config(font=("consolas",12),justify="left")
+    label_mensaje.grid()  
+    
+#Mostrar botones y ocultar mensaje
+def mostrar_botones_ocultar_mensaje():
+    label_mensaje.grid_forget()
+    label_mensaje.config(font=("Arial",10),justify="center")
+    frame_labels_botones.pack_forget()
+    canvas.pack()
+    frame_labels_botones.pack()
+    mostrar_botones()  
+    
+def cambiar_tamanho_introducir(tamanho):
+    fuente=("Arial",tamanho)
+    campo_entrada.configure(font=fuente)
+    boton_menu_principal.configure(font=fuente)
+    label_error.configure(font=fuente)
 
 """
 Mostrar Territorios,
@@ -689,10 +743,49 @@ def mostrar_territorios():
                 mensaje+= F"\t\t{territorio[0]:<20} \t{territorio[3]:<5} % de vida\t\t{territorio[1]:<13} Km2\t{territorio[1]-territorio[2]:<13} Km2 muertos\n"
         mensaje+="\n"
     mensaje=mensaje[:-2]
-    var_mensaje.set(mensaje)
-    label_mensaje.config(font=("consolas",10),justify="left")
-    label_mensaje.grid()
+    mostrar_mensaje(mensaje)
     
+    
+"""
+Mostrar ranking de paises por extension,
+Esta funcion muestra el ranking de paises por extension de mayor a menor
+"""
+def mostrar_ranking_pais_extension():
+    global vida_paises
+
+    # Ordena los países de mayor a menor según su extensión total
+    ranking = sorted(vida_paises, key=lambda pais: pais[1], reverse=True)
+
+    mensaje = "Ranking de países por extensión:\n"
+    i=1
+    for pais in ranking:
+        mensaje += f"{i}. {pais[0]:<20}  {pais[1]:>15} Km2\n"
+        i+=1
+        
+    mostrar_mensaje(mensaje)
+    
+"""
+Mostrar ranking de paises por extension viva,
+Esta funcion muestra el ranking de paises por extension de mayor a menor viva
+"""
+def mostrar_ranking_pais_extension_viva():
+    global vida_paises
+
+    # Ordena los países de mayor a menor según su extensión total
+    ranking = sorted(vida_paises, key=lambda pais: pais[2], reverse=True)
+
+    mensaje = "Ranking de países por extensión viva:\n"
+    i=1
+    for pais in ranking:
+        mensaje += f"{i}. {pais[0]:<20}  {pais[2]:>15} Km2 vivos\n"
+        i+=1
+        
+    mostrar_mensaje(mensaje)
+    
+#Mostrar pais seleccionado
+def mostrar_pais_seleccionado():
+    global mapa,territorio_seleccionado
+    var_mensaje.set(f"Se seleccion correctamente el pais {mapa[territorio_seleccionado[0]][0]}")
 
 #########################
 #Funciones de submenus
@@ -700,7 +793,8 @@ def mostrar_territorios():
                
 #Submenu IA Aleatoria
 def submenu_IA():
-    global cuenta,misiles_con_x_clave,x,y
+    global cuenta,misiles_con_x_clave,x,y,entrada
+    entrada= var_entrada.get()
     if cuenta==-1.5:
         mostrar_introducir()
         var_mensaje.set("Introduce la clave de los misiles que desea disparar")
@@ -711,6 +805,7 @@ def submenu_IA():
             cuenta=9
         boton_continuar.grid()  
     elif 1==cuenta:
+        borrar_disparo()
         if misiles_con_x_clave==[]:
             cuenta=0
             label_mensaje.grid_forget()
@@ -757,13 +852,48 @@ def submenu_mostrar_territorios():
         canvas.pack_forget()
     elif cuenta==1:
         cuenta=0
-        label_mensaje.grid_forget()
-        label_mensaje.config(font=("Arial",10),justify="center")
-        frame_labels_botones.pack_forget()
-        canvas.pack()
-        frame_labels_botones.pack()
-        mostrar_botones()       
+        frame_labels_botones.pack_configure(expand=False)
+        mostrar_botones_ocultar_mensaje() 
+         
+        
+#Sub menu mostrar ranking pais extension  
+def submenu_mostrar_ranking_pais_extension():
+    global cuenta
+    if cuenta==0:
+        mostrar_ranking_pais_extension()
+        boton_continuar.grid()
+        canvas.pack_forget()
+    elif cuenta==1:
+        cuenta=0
+        mostrar_botones_ocultar_mensaje()
+        frame_labels_botones.pack_configure(expand=False)
+        
+def submenu_mostrar_ranking_pais_extension_viva():
+    global cuenta
+    if cuenta==0:
+        mostrar_ranking_pais_extension_viva()
+        boton_continuar.grid()
+        canvas.pack_forget()
+    elif cuenta==1:
+        cuenta=0
+        mostrar_botones_ocultar_mensaje()
+        frame_labels_botones.pack_configure(expand=False)
 
+def submenu_status_territorio():
+    global cuenta,entrada
+    entrada= var_entrada.get()
+    if cuenta==0:
+        pedir_pais()
+    elif cuenta==2:
+        boton_continuar.grid()
+        boton_continuar.configure(font=("Arial",15))
+        mostrar_pais_seleccionado()
+    elif cuenta==3:
+        cambiar_tamanho_introducir(10)
+        boton_continuar.configure(font=("Arial",10))
+        frame_labels_botones.pack_configure(expand=False)
+        mostrar_botones_ocultar_mensaje()
+        
 
 #########################
 #Funciones de menus
@@ -809,15 +939,50 @@ def menu_mostrar_territorios():
     cuenta=0
     opicion=3
     ocultar_botones()
+    frame_labels_botones.pack_configure(expand=True)
+    menu_principal()
+    
+def menu_mostrar_ranking_pais_extension():
+    global opicion,cuenta
+    cuenta=0
+    opicion=4
+    ocultar_botones()
+    frame_labels_botones.pack_configure(expand=True)
+    menu_principal()
+    
+def menu_mostrar_ranking_pais_extension_viva():
+    global opicion,cuenta
+    cuenta=0
+    opicion=5
+    ocultar_botones()
+    frame_labels_botones.pack_configure(expand=True)
+    menu_principal()
+    
+def menu_status_territo():
+    global cuenta, opicion, territorio_seleccionado
+    cuenta=0
+    opicion=6
+    territorio_seleccionado=[]
+    ocultar_botones()
+    cambiar_tamanho_introducir(15)
+    label_mensaje.configure(font=("Arial",15))
+    canvas.pack_forget()
+    frame_labels_botones.pack_configure(expand=True)
     menu_principal()
     
 def menu_principal():
     global entrada,opicion
-    entrada= var_entrada.get()
     if opicion==1 or opicion==2:
         submenu_IA()  
     elif opicion==3:
         submenu_mostrar_territorios() 
+    elif opicion==4:
+        submenu_mostrar_ranking_pais_extension()
+    elif opicion==5:
+        submenu_mostrar_ranking_pais_extension_viva()
+    elif opicion == 6:
+        submenu_status_territorio()
+        
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -880,30 +1045,30 @@ label_error=tk.Label(frame_labels_botones,textvariable=var_error,bg="#3CF1E8",fo
 
 #Botones
 
-boton_cargar_mapa=tk.Button(frame_labels_botones,text="Cargar mapa")
+boton_cargar_mapa=tk.Button(frame_labels_botones,text="Cargar mapa",font=("Arial",10))
 
-boton_IA_auto= tk.Button(frame_labels_botones,text="IA Aleatoria",command=IA_aleatoria,)
+boton_IA_auto= tk.Button(frame_labels_botones,text="IA Aleatoria",command=IA_aleatoria,font=("Arial",10))
 
-boton_IA_manual= tk.Button(frame_labels_botones,text="IA Manual",command=IA_Manual)
+boton_IA_manual= tk.Button(frame_labels_botones,text="IA Manual",command=IA_Manual,font=("Arial",10))
 
-boton_lista_de_territorios=tk.Button(frame_labels_botones,text="Lista de territorios",command=menu_mostrar_territorios)
+boton_lista_de_territorios=tk.Button(frame_labels_botones,text="Lista de territorios",command=menu_mostrar_territorios,font=("Arial",10))
 
-boton_ranking_de_paises_extensión=tk.Button(frame_labels_botones,text="Ranking de países por extensión")
+boton_ranking_de_paises_extensión=tk.Button(frame_labels_botones,text="Ranking de países por extensión",command=menu_mostrar_ranking_pais_extension,font=("Arial",10))
 
-boton_ranking_de_paises_vida=tk.Button(frame_labels_botones,text="Ranking de países por porcentaje de vida")
+boton_ranking_de_paises_vida=tk.Button(frame_labels_botones,text="Ranking de países por porcentaje de vida",command=menu_mostrar_ranking_pais_extension_viva,font=("Arial",10))
 
-boton_status_del_territorio=tk.Button(frame_labels_botones,text="Status del territorio")
+boton_status_del_territorio=tk.Button(frame_labels_botones,text="Status del territorio",command=menu_status_territo,font=("Arial",10))
 
-boton_consultar_historico_pais=tk.Button(frame_labels_botones,text="Consultar histórico de país")
+boton_consultar_historico_pais=tk.Button(frame_labels_botones,text="Consultar histórico de país",font=("Arial",10))
 
 
-boton_mover_territorio_a_otro_pais=tk.Button(frame_labels_botones,text="Mover territorio a otro país")
+boton_mover_territorio_a_otro_pais=tk.Button(frame_labels_botones,text="Mover territorio a otro país",font=("Arial",10))
 
-boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar territorios")
+boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar territorios",font=("Arial",10))
 
-boton_ganador=tk.Button(frame_labels_botones,text="Ganador")
+boton_ganador=tk.Button(frame_labels_botones,text="Ganador",font=("Arial",10))
 
-boton_salir=tk.Button(frame_labels_botones,text="Salir")
+boton_salir=tk.Button(frame_labels_botones,text="Salir",font=("Arial",10))
 
 botones=[boton_cargar_mapa,boton_IA_auto,boton_IA_manual,boton_lista_de_territorios,boton_ranking_de_paises_extensión,boton_ranking_de_paises_vida,boton_status_del_territorio,boton_consultar_historico_pais,boton_mover_territorio_a_otro_pais,boton_aniquilar_territorios,boton_ganador,boton_salir]
 mostrar_botones()
@@ -912,6 +1077,6 @@ boton_continuar=tk.Button(frame_labels_botones,text="Continuar",command=continua
     
 boton_menu_principal= tk.Button(frame_labels_botones,text="introducir",command=menu_principal) 
 #Entrada
-campo_entrada=tk.Entry(frame_labels_botones,textvariable=var_entrada)
+campo_entrada=tk.Entry(frame_labels_botones,textvariable=var_entrada,font=("Arial",10))
 
 root.mainloop()
