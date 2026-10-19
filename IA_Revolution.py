@@ -17,9 +17,10 @@ PATH_BITACORA="bitácora.txt"
 mapa=[] #Aqui se cargan los puntos del mapa
 misiles=[] #Aqui se cargan los misiles
 bitacora=[] #Aqui se cargan los disparos realizados
-misiles_con_x_clave=[['Costa Rica', 'Balistico', 40,23], ['Panama', 'Ojiva', 23]] #Aqui se guardan los misiles con la clave dada
+misiles_con_x_clave=[] #Aqui se guardan los misiles con la clave dada
 terrenos=[] #Aqui esta la ubicacion de los terrenos en la lista mapa y sus puntos
 vida_paises=[]#Aqui va estar la vida y territorio de los paises[[pais1,terreno_total,terreno_restante,vida,[[provincia1,terreno_total,terreno_restante,vida,[[territorio1,terreno_total,terreno_restante,vida],[territorio1,terreno_total,terreno_restante,vida]],[provincia2...]],[pais2,[...]]
+mapa_cargado=False
 disparo_grafica=[] #Aqui se va a guarda el punto del canva para luego borrarlo
 misiles_disparados=0
 pais_misil=""
@@ -166,6 +167,57 @@ def buscar_coordenadas_terreno(terreno,decimal):
     if decimal:
         return [terreno[4][2][0][0],terreno[4][2][0][1],terreno[4][2][1][0],terreno[4][2][1][1]]
     return [terreno[4][0][0],terreno[4][0][1],terreno[4][1][0],terreno[4][1][1]]
+
+"""
+Esta adentro,
+Esta funcion dice si un punto esta dentro de un rectangulo
+"""
+#E: Un x,y como enteros en decimal y un rectangulo que es una lista
+#S: Un bool True si esta adentro y false sino
+def esta_adentro(x,y,rectangulo):
+    x_min,x_max=sorted([rectangulo[0],rectangulo[2]])
+    y_min,y_max=sorted([rectangulo[1],rectangulo[3]])
+    return x_min<=x<=x_max and y_min<=y<=y_max
+
+"""
+Validar terrenos detro de mapa,
+de la lista terrenos va a a decir 
+si un terreno esta dentro o no de la grafica
+"""
+#S: una lista con el terreno afuera de la grafia o una lista vacia si todo esta bien
+def terreno_dentro_grafica():
+    global terrenos
+    for terreno in terrenos:
+        x1,y1,x2,y2=buscar_coordenadas_terreno(terreno,True)
+        area_grafica=[4,80,940,548]
+        if not esta_adentro(x1,y1,area_grafica) and not esta_adentro(x2,y2,area_grafica):
+            return terreno
+    return []
+
+"""
+Validar que no se tralapen,
+Esta funcion valida que no se traslapen 2 territorios
+Si se traslapa devuelve una lista con los 2 terrenos
+sino una lista vacia
+"""
+#E: La lista con todos los terrenos
+#S: Una lista con los 2 terrenos que se chocan o una lista vacia
+def se_traslapan(terrenos):
+    total= len(terrenos)-1
+    i=0
+    while i<total:
+        j=i+1
+        x1,y1,x2,y2= buscar_coordenadas_terreno(terrenos[i],True)
+        while j <= total:
+            rectangulo= buscar_coordenadas_terreno(terrenos[j],True)
+            if esta_adentro(x1,y1,rectangulo) and esta_adentro(x2,y2,rectangulo) and esta_adentro(x1,y2,rectangulo) and esta_adentro(x2,y1,rectangulo):
+                return [terrenos[i],terrenos[j]]
+            j+=1
+        i+=1
+    return []
+    
+
+
 
 #-------------------------------------------------------------------------------------
 
@@ -326,17 +378,6 @@ def cargar_partida():
                         break
 
 #---------------------------------------------------------------------------------------
-     
-"""
-Esta adentro,
-Esta funcion dice si un punto esta dentro de un rectangulo
-"""
-#E: Un x,y como enteros en decimal y un rectangulo que es una lista
-#S: Un bool True si esta adentro y false sino
-def esta_adentro(x,y,rectangulo):
-    x_min,x_max=sorted([rectangulo[0],rectangulo[2]])
-    y_min,y_max=sorted([rectangulo[1],rectangulo[3]])
-    return x_min<=x<=x_max and y_min<=y<=y_max
         
 """
 Atino el disparo, esta funcion dice si 
@@ -568,7 +609,7 @@ def indicar_entradas_punto():
     if cuenta==2 or cuenta==5:
         var_mensaje.set(f"Introduce los grados para la {palabra}")
         return #esto es para que no sigua
-    if cuenta==4 or cuenta==7:
+    elif cuenta==4 or cuenta==7:
         palabra2= "segundos"
     var_mensaje.set(f"Introduce los {palabra2} para la {palabra}")
 
@@ -926,8 +967,47 @@ def mostrar_consulta_historica_pais():
 #########################
 #Funciones de submenus
 #########################
-               
-#Submenu IA Aleatoria
+
+# submenu_cargar_mapa():
+def submenu_cargar_mapa():
+    global mapa_cargado,cuenta,terrenos,opicion
+    if mapa_cargado and cuenta==0:
+        var_mensaje.set("El mapa ya esta cargado")
+        boton_continuar.grid()
+    elif cuenta==0:
+        mensaje="No se puede cargar el mapa"
+        terreno= terreno_dentro_grafica()
+        terrenos_traslapados= se_traslapan(terrenos)
+        if terreno!=[]:
+            var_mensaje.set(f"El territorio {terreno[0]} esta afuera de la grafica\n{mensaje}")
+        elif terrenos_traslapados!=[]:
+            var_mensaje.set(f"Los territorios {terrenos_traslapados[0][0]} y {terrenos_traslapados[1][0]} estan traslapados\n{mensaje}")
+        else:
+            cargar_mapa()
+            var_mensaje.set("El mapa se cargo correctamente")
+            mapa_cargado=True
+        boton_continuar.grid()
+    if cuenta==1:
+        label_mensaje.grid_forget()
+        mostrar_botones()
+        
+# submenu mapa no cargado
+def submenu_mapa_no_cargado():
+    global cuenta,opicion
+    print('l')
+    if opicion==2:
+        opicion=1
+        cuenta=0
+    if cuenta==0:
+        mostrar_botones_ocultar_mensaje()
+        ocultar_botones()
+        label_mensaje.grid()
+        var_mensaje.set("El mapa aun no esta cargado")
+        boton_continuar.grid()
+    if cuenta ==1:
+        label_mensaje.grid_forget()
+        mostrar_botones()               
+#Submenu IA 
 def submenu_IA():
     global cuenta,misiles_con_x_clave,x,y,entrada
     entrada= var_entrada.get()
@@ -1112,7 +1192,6 @@ def submenu_Mover_territorio_a_otro_pais():
     elif cuenta==8:
         escoger_pais_provincia_territorio("provincia",mapa[territorio_seleccionado[0]][1])
     elif cuenta==9 or cuenta==8.5:
-        print("o")
         boton_continuar.grid()
         boton_continuar.configure(font=("Arial",15))
         if mover_territorio(territorio_seleccionado2,territorio_seleccionado):
@@ -1129,12 +1208,14 @@ def submenu_Mover_territorio_a_otro_pais():
 #Funciones de menus
 #########################
 
-#IA aleatoria
-"""
-Aqui se va abrir el menu donde
-la IA debe adivinar un codigo y 
-lanzar un misil
-"""
+def menu_cargar_mapa():
+    global opicion,label_mensaje,cuenta
+    label_mensaje.grid()
+    cuenta=0
+    opicion=0
+    ocultar_botones()
+    menu_principal()
+
 def IA_aleatoria():
     global opicion,punto,cuenta,x,y,entrada,clave
     clave=0
@@ -1227,8 +1308,12 @@ def menu_mover_territorio_a_otro_pais():
     menu_principal()
     
 def menu_principal():
-    global entrada,opicion
-    if opicion==1 or opicion==2:
+    global entrada,opicion,mapa_cargado
+    if opicion==0:
+        submenu_cargar_mapa()
+    elif not mapa_cargado:
+        submenu_mapa_no_cargado()
+    elif opicion==1 or opicion==2:
         submenu_IA()  
     elif opicion==3:
         submenu_mostrar_territorios() 
@@ -1289,10 +1374,8 @@ canvas.pack()
 mapa_mundi= tk.PhotoImage(file="mapa22.png")
 canvas.create_image(475,305, image=mapa_mundi)
     
-crear_grafica()
 canvas.create_text(475,20,text="Mapa mundial",font=("Arial",20))
-cargar_mapa()
-
+crear_grafica()
 #Frame
 frame_labels_botones= tk.Frame(root,width=1000,height=200) 
 frame_labels_botones.pack() #Esto es para poder poner los botones en abajo del canva
@@ -1304,7 +1387,7 @@ label_error=tk.Label(frame_labels_botones,textvariable=var_error,bg="#3CF1E8",fo
 
 #Botones
 
-boton_cargar_mapa=tk.Button(frame_labels_botones,text="Cargar mapa",font=("Arial",10))
+boton_cargar_mapa=tk.Button(frame_labels_botones,text="Cargar mapa",font=("Arial",10),command=menu_cargar_mapa)
 
 boton_IA_auto= tk.Button(frame_labels_botones,text="IA Aleatoria",command=IA_aleatoria,font=("Arial",10))
 
@@ -1327,7 +1410,7 @@ boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar terri
 
 boton_ganador=tk.Button(frame_labels_botones,text="Ganador",font=("Arial",10))
 
-boton_salir=tk.Button(frame_labels_botones,text="Salir",font=("Arial",10))
+boton_salir=tk.Button(frame_labels_botones,text="Salir",font=("Arial",10),command=root.destroy)
 
 botones=[boton_cargar_mapa,boton_IA_auto,boton_IA_manual,boton_lista_de_territorios,boton_ranking_de_paises_extensión,boton_ranking_de_paises_vida,boton_status_del_territorio,boton_consultar_historico_pais,boton_mover_territorio_a_otro_pais,boton_aniquilar_territorios,boton_ganador,boton_salir]
 mostrar_botones()
