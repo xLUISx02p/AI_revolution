@@ -32,6 +32,7 @@ y=[] #Se guuarda una latitud
 clave=0 #Aqui se guarda la clave
 territorio_seleccionado=[] #Aqui se guardan los datos para seleccionar un territorio
 territorio_seleccionado2=[] #Aqui se va a guardar una copia de territorio_seleccionado
+territorios_aniquilados=[]#Aqui van a ir los territorios con vida 0
 mensaje_validar=False #Una validacion para saber si se puso el mensaje
 entrada="" #Aqui se guarda lo que ingrese el usuario
 cuenta=0 #Esta cuenta es la que maneja los menus
@@ -314,8 +315,11 @@ def buscar_misiles():
     misiles_con_x_clave=[]
     for pais in misiles:
         for misil in pais[3]:
-            if misil[4]==clave:
-                misiles_con_x_clave.append([pais[0],misil[0],misil[3],misil[4],misil[1]])
+            clave_misli= misil[4]
+            if es_entero(clave_misli):
+                clave_misli=int(clave_misli)
+                if clave_misli==clave:
+                    misiles_con_x_clave.append([pais[0],misil[0],misil[3],clave_misli,misil[1]])
 
 #Crear mensaje para los misiles encontrados
 def crea_mensaje_misiles():
@@ -336,11 +340,21 @@ def bajar_vida(territorio_golpe,danho):
     provincia=pais[4][0][territorio_golpe[2]]
     territorio=provincia[4][territorio_golpe[3]]
 
-    territorio[2]-=danho
+    if territorio[2]<danho:
+        danho=territorio[2]
+        territorio[2]=0
+    else:
+        territorio[2]-=danho     
     territorio[3]=round(territorio[2]/territorio[1]*100,2)
-    provincia[2]-=danho
+    if provincia[2]<danho:
+        danho=provincia[2]
+        provincia[2]=0
+    else:
+        provincia[2]-=danho
     provincia[3]=round(provincia[2]/provincia[1]*100,2)
     pais[2]-=danho
+    if pais[2]<0:
+        pais[2]=0
     pais[3]=round(pais[2]/pais[1]*100,2)
     
 #---------------------------------------------------------------------------------------
@@ -515,6 +529,25 @@ def mover_territorio(territorio,destino):
     crear_vida_paises()
     cargar_partida()
     return True
+ 
+"""
+aniquilar territorios,
+Todos los territorios con vida 0 los copia a una lista
+con donde todos los territorios tienen vida 0
+"""
+#S: Devuelve una lista con los territorios aniquilados esa ronda 
+ 
+def aniquilar_territorios():
+    global vida_paises,territorios_aniquilados
+    aniquilados_actual=[]
+    for pais in vida_paises:
+        for provincia in pais[4][0]:
+            for territorio in provincia[4]:
+                nombre_territorio= territorio[0]
+                if territorio[2]==0 and nombre_territorio not in territorios_aniquilados:
+                    territorios_aniquilados.append(nombre_territorio)
+                    aniquilados_actual.append(nombre_territorio)
+    return aniquilados_actual               
     
 #------------
 #Funciones para entradas
@@ -634,13 +667,13 @@ def pedir_clave():
         entrada=int(entrada)
         if 0>entrada or entrada>99:
             var_error.set("Solo se permiten numeros de 0 a 99")
-            return False
-        var_error.set("")
-        var_entrada.set("")
-        clave=entrada
-        cuenta+=1.5
-        ocultar_introducir()
-        submenu_IA()
+        else:
+            var_error.set("")
+            var_entrada.set("")
+            clave=entrada
+            cuenta+=1.5
+            ocultar_introducir()
+            submenu_IA()
     elif entrada!="":
         var_error.set("Error! eso no es valido")
         
@@ -963,6 +996,25 @@ def mostrar_consulta_historica_pais():
         for territorio in provincia[2]:
             mensaje+=f"\t\t{territorio[0]:<20} {territorio[1]} disparos recibidos\n"
     mostrar_mensaje(mensaje[:-1])
+    
+# Indicar los territorios aniquilados
+def indicar_territorios_aniquilados():
+    territorios= aniquilar_territorios()
+    if territorios==[]:
+        var_mensaje.set("No se aniquiló ningun territorio")
+    else:
+        mensaje= f"Se aniquiló a {territorios[0]}"
+        num_territorios= len(territorios)
+        if num_territorios>1:
+            if num_territorios>2:
+                i=1
+                while i<num_territorios-1:
+                    mensaje+= f", {territorios[i]} "
+                    i+=1
+            mensaje+= f" y {territorios[-1]}"
+        var_mensaje.set(mensaje)
+        
+    
 
 #########################
 #Funciones de submenus
@@ -994,7 +1046,6 @@ def submenu_cargar_mapa():
 # submenu mapa no cargado
 def submenu_mapa_no_cargado():
     global cuenta,opicion
-    print('l')
     if opicion==2:
         opicion=1
         cuenta=0
@@ -1006,7 +1057,8 @@ def submenu_mapa_no_cargado():
         boton_continuar.grid()
     if cuenta ==1:
         label_mensaje.grid_forget()
-        mostrar_botones()               
+        mostrar_botones()     
+        cambiar_tamanho_introducir(10)          
 #Submenu IA 
 def submenu_IA():
     global cuenta,misiles_con_x_clave,x,y,entrada
@@ -1099,6 +1151,7 @@ def submenu_status_territorio():
     global cuenta,entrada,territorio_seleccionado,mapa
     entrada= var_entrada.get()
     if cuenta==0:
+        canvas.pack_forget()
         escoger_pais_provincia_territorio("país",mapa)
     elif cuenta==0.5:
         cuenta+=0.5
@@ -1135,6 +1188,7 @@ def submenu_status_territorio():
 def submenu_consultar_historico_pais():
     global cuenta,entrada
     if cuenta==0:
+        canvas.pack_forget()
         entrada= var_entrada.get()
         escoger_pais_provincia_territorio("país",mapa)
     elif cuenta==0.5:
@@ -1144,12 +1198,14 @@ def submenu_consultar_historico_pais():
         boton_continuar.grid()
     elif cuenta==2:
         frame_labels_botones.pack_configure(expand=False)
+        cambiar_tamanho_introducir(10)
         mostrar_botones_ocultar_mensaje()
         
 def submenu_Mover_territorio_a_otro_pais():
     global cuenta,entrada,territorio_seleccionado,mapa,territorio_seleccionado2
     entrada= var_entrada.get()
     if cuenta==0:
+        canvas.pack_forget()
         escoger_pais_provincia_territorio("país",mapa)
     elif cuenta==0.5:
         cuenta+=0.5
@@ -1202,7 +1258,23 @@ def submenu_Mover_territorio_a_otro_pais():
         cambiar_tamanho_introducir(10)
         boton_continuar.configure(font=("Arial",10))
         frame_labels_botones.pack_configure(expand=False)
-        mostrar_botones_ocultar_mensaje()       
+        mostrar_botones_ocultar_mensaje()  
+        
+#Submenu aniquilar Territorios     
+
+def submenu_aniquilar_territorios():
+    global cuenta
+    if cuenta==0:
+        canvas.pack_forget()
+        boton_continuar.configure(font=("Arial",15))
+        label_mensaje.grid()
+        boton_continuar.grid()
+        indicar_territorios_aniquilados()
+    elif cuenta==1:
+        boton_continuar.configure(font=("Arial",10))
+        frame_labels_botones.pack_configure(expand=False)
+        mostrar_botones_ocultar_mensaje()   
+        
 
 #########################
 #Funciones de menus
@@ -1278,7 +1350,6 @@ def menu_status_territo():
     ocultar_botones()
     cambiar_tamanho_introducir(15)
     label_mensaje.configure(font=("Arial",15))
-    canvas.pack_forget()
     frame_labels_botones.pack_configure(expand=True)
     menu_principal()
     
@@ -1288,7 +1359,6 @@ def menu_consultar_historico_pais():
     opicion=7
     territorio_seleccionado=[] 
     ocultar_botones()
-    canvas.pack_forget()
     cambiar_tamanho_introducir(15)
     label_mensaje.configure(font=("Arial",15))
     frame_labels_botones.pack_configure(expand=True)
@@ -1303,7 +1373,16 @@ def menu_mover_territorio_a_otro_pais():
     ocultar_botones()
     cambiar_tamanho_introducir(15)
     label_mensaje.configure(font=("Arial",15))
-    canvas.pack_forget()
+    frame_labels_botones.pack_configure(expand=True)
+    menu_principal()
+    
+def menu_aniquilar_territorios():
+    global cuenta, opicion, territorio_seleccionado
+    cuenta=0
+    opicion=9
+    var_entrada.set("")
+    ocultar_botones()
+    label_mensaje.configure(font=("Arial",15))
     frame_labels_botones.pack_configure(expand=True)
     menu_principal()
     
@@ -1327,6 +1406,8 @@ def menu_principal():
         submenu_consultar_historico_pais()
     elif opicion==8:
         submenu_Mover_territorio_a_otro_pais()
+    elif opicion==9:
+        submenu_aniquilar_territorios()
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -1377,7 +1458,7 @@ canvas.create_image(475,305, image=mapa_mundi)
 canvas.create_text(475,20,text="Mapa mundial",font=("Arial",20))
 crear_grafica()
 #Frame
-frame_labels_botones= tk.Frame(root,width=1000,height=200) 
+frame_labels_botones= tk.Frame(root,width=1000,height=200,bg="#3CF1E8") 
 frame_labels_botones.pack() #Esto es para poder poner los botones en abajo del canva
 
 #Labels
@@ -1406,7 +1487,7 @@ boton_consultar_historico_pais=tk.Button(frame_labels_botones,text="Consultar hi
 
 boton_mover_territorio_a_otro_pais=tk.Button(frame_labels_botones,text="Mover territorio a otro país",command=menu_mover_territorio_a_otro_pais,font=("Arial",10))
 
-boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar territorios",font=("Arial",10))
+boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar territorios",command=menu_aniquilar_territorios,font=("Arial",10))
 
 boton_ganador=tk.Button(frame_labels_botones,text="Ganador",font=("Arial",10))
 
