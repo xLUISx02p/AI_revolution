@@ -8,7 +8,7 @@ import random
 
 PATH_MAPA= "mapa.txt"
 PATH_MISILES="misiles.txt"
-PATH_BITACORA="bitácora.txt"
+PATH_BITACORA="bitacora.txt"
 
 #########################
 #Variables globales
@@ -418,7 +418,7 @@ def actualizar_cantidad_misiles(gastados):
     for pais in misiles:
         if pais[0]==misiles_con_x_clave[0][0]:
             for misil in pais[3]:
-                if misiles_con_x_clave[0][3]==misil[4]:
+                if misiles_con_x_clave[0][3]==int(misil[4]):
                     misil[3]-=gastados
                     pais[2]-=gastados
     guardar(PATH_MISILES,misiles)
@@ -533,7 +533,7 @@ def mover_territorio(territorio,destino):
 """
 aniquilar territorios,
 Todos los territorios con vida 0 los copia a una lista
-con donde todos los territorios tienen vida 0
+donde todos los territorios tienen vida 0
 """
 #S: Devuelve una lista con los territorios aniquilados esa ronda 
  
@@ -547,7 +547,20 @@ def aniquilar_territorios():
                 if territorio[2]==0 and nombre_territorio not in territorios_aniquilados:
                     territorios_aniquilados.append(nombre_territorio)
                     aniquilados_actual.append(nombre_territorio)
-    return aniquilados_actual               
+    return aniquilados_actual     
+
+"""
+territorios muertos,
+Esta funcion va a devolver el % de territorios
+muertos
+"""
+#S: un real positivo que es el % de territorios muertos
+def territorios_muertos():
+    global territorios_aniquilados,terrenos
+    aniquilar_territorios()
+    porcentaje_de_muertos= round(len(territorios_aniquilados)/len(terrenos)*100,2)
+    return porcentaje_de_muertos
+          
     
 #------------
 #Funciones para entradas
@@ -1013,6 +1026,15 @@ def indicar_territorios_aniquilados():
                     i+=1
             mensaje+= f" y {territorios[-1]}"
         var_mensaje.set(mensaje)
+ 
+#Mostrar quien fue el ganador        
+def mostrar_ganador():
+    porcentaje_muertos= territorios_muertos()
+    if porcentaje_muertos>50:
+        var_mensaje.set(f"La IA ganó aniquilando al {porcentaje_muertos}% de los territorios")
+    else:
+        var_mensaje.set(f"La humanidad gano ya que solo se murio el {porcentaje_muertos}% de los territorios")
+        
         
     
 
@@ -1273,7 +1295,23 @@ def submenu_aniquilar_territorios():
     elif cuenta==1:
         boton_continuar.configure(font=("Arial",10))
         frame_labels_botones.pack_configure(expand=False)
-        mostrar_botones_ocultar_mensaje()   
+        mostrar_botones_ocultar_mensaje()  
+        
+#Submenu ganador
+def submenu_ganador():
+    global cuenta,mapa,misiles,bitacora
+    if cuenta==0:
+        canvas.pack_forget()
+        boton_continuar.configure(font=("Arial",15))
+        label_mensaje.grid()
+        boton_continuar.grid()
+        mostrar_ganador()
+    elif cuenta==1:
+        var_mensaje.set("Muchas gracias")
+        boton_continuar.grid()
+    elif cuenta==2:
+        guardar(PATH_BITACORA,"")
+        root.destroy()    
         
 
 #########################
@@ -1377,7 +1415,7 @@ def menu_mover_territorio_a_otro_pais():
     menu_principal()
     
 def menu_aniquilar_territorios():
-    global cuenta, opicion, territorio_seleccionado
+    global cuenta, opicion
     cuenta=0
     opicion=9
     var_entrada.set("")
@@ -1386,8 +1424,19 @@ def menu_aniquilar_territorios():
     frame_labels_botones.pack_configure(expand=True)
     menu_principal()
     
+def menu_ganador():
+    global cuenta, opicion
+    cuenta=0
+    opicion=10
+    var_entrada.set("")
+    ocultar_botones()
+    label_mensaje.configure(font=("Arial",15))
+    frame_labels_botones.pack_configure(expand=True)
+    menu_principal()
+    
+   
 def menu_principal():
-    global entrada,opicion,mapa_cargado
+    global opicion,mapa_cargado
     if opicion==0:
         submenu_cargar_mapa()
     elif not mapa_cargado:
@@ -1408,6 +1457,8 @@ def menu_principal():
         submenu_Mover_territorio_a_otro_pais()
     elif opicion==9:
         submenu_aniquilar_territorios()
+    elif opicion==10:
+        submenu_ganador()
     
 #Boton de continuar
 #Siempre le suma uno a la cuenta y llama
@@ -1431,6 +1482,7 @@ bitacora= cargar(PATH_BITACORA)
 conseguir_territorios()
 crear_vida_paises()
 cargar_partida()
+aniquilar_territorios()
 
 #########################
 #Ventana
@@ -1489,7 +1541,7 @@ boton_mover_territorio_a_otro_pais=tk.Button(frame_labels_botones,text="Mover te
 
 boton_aniquilar_territorios=tk.Button(frame_labels_botones,text="Aniquilar territorios",command=menu_aniquilar_territorios,font=("Arial",10))
 
-boton_ganador=tk.Button(frame_labels_botones,text="Ganador",font=("Arial",10))
+boton_ganador=tk.Button(frame_labels_botones,text="Ganador",font=("Arial",10),command=menu_ganador)
 
 boton_salir=tk.Button(frame_labels_botones,text="Salir",font=("Arial",10),command=root.destroy)
 
